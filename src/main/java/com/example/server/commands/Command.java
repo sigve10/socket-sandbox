@@ -9,5 +9,5 @@ public abstract class Command {
 		this.args = new String[argumentCount];
 	}
 
-	public abstract String execute();
+	public abstract String execute(String[] args);
 }
