@@ -17,14 +17,16 @@ public class CommandSet {
 		Iterator<String> iterator = commands.keySet().iterator();
 
 		Command command = null;
-		String result = null;
+		String result = "Invalid command";
 
 		while (iterator.hasNext() && command == null) {
 			String current = iterator.next();
 			
 			if (commandWord.matches(current)) {
 				command = commands.get(current);
-				result = command.execute(commandContents);
+				if (command != null) {
+					result = command.execute(commandContents);
+				}
 			}
 		}
 

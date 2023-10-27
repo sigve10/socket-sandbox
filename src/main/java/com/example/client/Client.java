@@ -83,16 +83,13 @@ public class Client {
 	 */
 	private void listenForReply() {
 		String message = null;
-		
-		do{
-			try {
-				message = replyInput.readLine();
-				System.out.println("Recived reply " + message);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} while(message == null);
+
+		try {
+			message = replyInput.readLine();
+			System.out.println("Recived reply " + message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}	
 	
 	public static void main(String args[]) {
