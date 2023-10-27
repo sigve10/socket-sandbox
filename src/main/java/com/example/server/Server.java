@@ -14,10 +14,14 @@ public class Server {
 	private CommandSet commandSet;
 	private ServerSocket server;
 
-	public Server(int port) throws IOException {
+	public Server(int port) {
 		this.port = port;
+	}
+
+	public void start() throws IOException {
+	
 		this.server = new ServerSocket(port);
-		System.out.println("Server started on port " + port);
+		System.out.println("Server started on port " + this.port);
 
 		do {
 			Socket client = this.server.accept();
@@ -41,6 +45,7 @@ public class Server {
 	public static void main(String[] args) {
 		try {
 			Server server = new Server(8080);
+			server.start();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
