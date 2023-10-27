@@ -25,9 +25,10 @@ public class ClientConnection extends Thread {
 
 		do {
 			response = readClientRequest();
-
-			System.out.println("Server: Received message \"" + response + "\"");
-		} while (response == null || !response.equalsIgnoreCase("Disconnect"));
+			if (response != null) {
+				System.out.println("Server: Received message \"" + response + "\"");
+			}
+		} while (response != null && !response.equalsIgnoreCase("Disconnect"));
 
 		this.close();
 	}
