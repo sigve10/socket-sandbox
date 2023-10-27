@@ -9,7 +9,7 @@ public abstract class Command {
 	protected final Logic actor;
 	
 	/**
-	 * Creates a command with a fixed number of arguments.
+	 * Creates a command with a fixed number of arguments
 	 */
 	protected Command(Logic actor) {
 		this.actor = actor;
