@@ -51,11 +51,32 @@ public class Client {
 	}
 	
 	public static void main(String args[]) {
-		try {
-			Client client = new Client("localhost", 8080);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		int maxAttempts = 3;
+	
+		for (int i = 0; i < maxAttempts; i++) {
+			try {
+				System.out.print("Enter server address (default: localhost): ");
+				String address = reader.readLine().trim();
+				if (address.isEmpty()) {
+					address = "localhost";
+				}
+	
+				System.out.print("Enter server port (default: 8080): ");
+				String portStr = reader.readLine().trim();
+				int port = portStr.isEmpty() ? 8080 : Integer.parseInt(portStr);
+	
+				Client client = new Client(address, port);
+				break; 
+			} catch (IOException e) {
+				if (i < maxAttempts - 1) {
+					System.out.println("Failed to connect. Retrying (" + (i + 2) + "/" + maxAttempts + ")...");
+				} else {
+					System.out.println("Failed to connect after " + maxAttempts + " attempts.");
+					e.printStackTrace();
+				}
+			}
 		}
 	}
+	
 }
