@@ -5,12 +5,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
+import com.example.server.commands.CommandSet;
+
 public class ClientConnection extends Thread {
 	private Socket clientSocket;
 	private BufferedReader input;
+	private CommandSet commandSet;
 
-	public ClientConnection(Socket clientSocket) throws IOException {
+	public ClientConnection(CommandSet commandSet, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
+		this.commandSet = commandSet;
 		
 		input = new BufferedReader(
 			new InputStreamReader(
@@ -39,7 +43,8 @@ public class ClientConnection extends Thread {
 		try {
 			String rawMessage = input.readLine();
 			System.out.println(" >>> " + rawMessage);
-			message = rawMessage;
+
+			message = this.commandSet.tryToExecuteCommand(rawMessage);
 		} catch (IOException e) {
 			System.err.println("Could not handle request. " + e.getMessage());
 		}

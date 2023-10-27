@@ -2,12 +2,16 @@ package com.example.server;
 
 import java.io.IOException;
 import java.net.Socket;
+
+import com.example.server.commands.CommandSet;
+
 import java.net.ServerSocket;
 
 public class Server {
 	private static boolean shutdownInitiated = false;
 
 	private final int port;
+	private CommandSet commandSet;
 	private ServerSocket server;
 
 	public Server(int port) throws IOException {
@@ -18,11 +22,15 @@ public class Server {
 		do {
 			Socket client = this.server.accept();
 			System.out.println("Connection from " + client.getInetAddress());
-			ClientConnection connection = new ClientConnection(client);
+			ClientConnection connection = new ClientConnection(commandSet, client);
 			connection.start();
 		} while (!Server.shutdownInitiated);
 
 		System.out.println("Servers have shut down. Terminating.");
+	}
+
+	public void setCommandSet(CommandSet commandSet) {
+		this.commandSet = commandSet;
 	}
 	
 	public static void shutDown() {
