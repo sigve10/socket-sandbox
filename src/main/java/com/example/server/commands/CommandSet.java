@@ -31,7 +31,7 @@ public class CommandSet {
 		return result;
 	}
 
-	public class CommandSetBuilder {
+	public static class CommandSetBuilder {
 		private HashMap<String, Command> commands;
 
 		public CommandSetBuilder add(String commandRegex, Command command) {
