@@ -1,6 +1,6 @@
 package com.example.server.commands;
 
-import com.example.handler.Logic;
+import com.example.server.handler.Logic;
 
 /**
  * Abstract class responsible for executing commands.
@@ -9,9 +9,7 @@ public abstract class Command {
 	protected final Logic actor;
 	
 	/**
-	 * Creates a command with a fixed number of arguments
-	 *
-	 * @param argumentCount the number of arguments
+	 * Creates a command with a fixed number of arguments.
 	 */
 	protected Command(Logic actor) {
 		this.actor = actor;
