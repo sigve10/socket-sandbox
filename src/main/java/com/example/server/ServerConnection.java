@@ -11,7 +11,7 @@ import java.net.Socket;
  * A connection from a {@link Server} to one individual client. Handles the connection independent
  * of other connected clients.
  */
-public class ClientConnection extends Thread {
+public class ServerConnection extends Thread {
 	private Socket clientSocket;
 	private BufferedReader input;
 	private CommandSet commandSet;
@@ -24,7 +24,7 @@ public class ClientConnection extends Thread {
 	 * @param clientSocket the socket this connection should listen to
 	 * @throws IOException if the connection fails
 	 */
-	public ClientConnection(CommandSet commandSet, Socket clientSocket) throws IOException {
+	public ServerConnection(CommandSet commandSet, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
 		this.commandSet = commandSet;
 
@@ -47,7 +47,7 @@ public class ClientConnection extends Thread {
 			response = readClientRequest();
 			if (response != null) {
 				System.out.println("Server: Received message \"" + response + "\"");
-				reply(response);
+				sendMessage(response);
 			}
 		} while (response != null && !response.equalsIgnoreCase("Disconnect"));
 
@@ -80,7 +80,7 @@ public class ClientConnection extends Thread {
 	 *
 	 * @param message The message that will be sent to the client
 	 */
-	public void reply(String message) {
+	public void sendMessage(String message) {
 		replyOutput.println(message);
 		System.out.println("Reply: *" + message + "* sent.");
 	}
