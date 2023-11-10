@@ -4,6 +4,7 @@ import com.example.server.commands.CommandSet;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 
 /**
  * A server running on the target machine. Can listen to incoming client connections and handle
@@ -19,34 +20,40 @@ public class Server {
 	private final int port;
 	private CommandSet commandSet;
 	private ServerSocket server;
+	private HashMap<String, ClientConnection> clientConnections;
 
 	/**
 	 * Creates a new server on the given port.
 	 *
 	 * @param port the listening port of the server
+	 * @throws IOException if server creation fails
 	 */
-	public Server(int port) {
+	public Server(int port) throws IOException {
+		this.server = new ServerSocket(port);
+		this.commandSet = null;
+		this.clientConnections = new HashMap<>();
 		this.port = port;
 	}
 
 	/**
 	 * Causes the server to start listening for new connections and handle incoming messages.
-	 *
-	 * @throws IOException if the creation of a server fails
 	 */
-	public void start() throws IOException {
-	
-		this.server = new ServerSocket(port);
+	public void start() {
 		System.out.println("Server started on port " + this.port);
+		new ServerIncomingConnectionListener(this, server).start();
+	}
 
-		do {
-			Socket client = this.server.accept();
-			System.out.println("Connection from " + client.getInetAddress());
-			ClientConnection connection = new ClientConnection(commandSet, client);
-			connection.start();
-		} while (!Server.shutdownInitiated);
-
-		System.out.println("Servers have shut down. Terminating.");
+	/**
+	 * Attempts to accept an incoming connection and create a handler for it.
+	 *
+	 * @param incomingConnection the client requesting a connection
+	 * @throws IOException if the connection is refused
+	 */
+	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
+		ClientConnection connection = new ClientConnection(commandSet, incomingConnection);
+		this.clientConnections.put(incomingConnection.getInetAddress().toString(), connection);
+		connection.start();
+		System.out.println("Connection from " + incomingConnection.getInetAddress());
 	}
 
 	/**
