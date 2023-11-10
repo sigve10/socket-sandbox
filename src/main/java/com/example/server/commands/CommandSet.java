@@ -65,6 +65,9 @@ public class CommandSet {
 		 * @return this builder in order to chain command
 		 */
 		public CommandSetBuilder add(String commandRegex, Command command) {
+			if (commands == null) {
+				commands = new HashMap<String, Command>();
+			}
 			this.commands.put(commandRegex, command);
 			
 			return this;
