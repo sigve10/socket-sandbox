@@ -20,7 +20,7 @@ public class Server {
 	private final int port;
 	private CommandSet commandSet;
 	private ServerSocket server;
-	private HashMap<String, ClientConnection> clientConnections;
+	private HashMap<String, ServerConnection> clientConnections;
 
 	/**
 	 * Creates a new server on the given port.
@@ -50,7 +50,7 @@ public class Server {
 	 * @throws IOException if the connection is refused
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
-		ClientConnection connection = new ClientConnection(commandSet, incomingConnection);
+		ServerConnection connection = new ServerConnection(commandSet, incomingConnection);
 		this.clientConnections.put(incomingConnection.getInetAddress().toString(), connection);
 		connection.start();
 		System.out.println("Connection from " + incomingConnection.getInetAddress());
@@ -63,6 +63,30 @@ public class Server {
 	 */
 	public void setCommandSet(CommandSet commandSet) {
 		this.commandSet = commandSet;
+	}
+
+	/**
+	 * Broadcasts a single message to all clients currently connected.
+	 *
+	 * @param message the message to be broadcasted
+	 */
+	public void broadcast(String message) {
+		clientConnections.values().forEach(client -> client.sendMessage(message));
+	}
+
+	/**
+	 * Routes a message to one specific target address. If the target does not exist, the message
+	 * is discarded.
+	 *
+	 * @param targetAddress the address to which the message should be sent
+	 * @param message the message to be sent
+	 */
+	public void route(String targetAddress, String message) {
+		if (clientConnections.containsKey(targetAddress)) {
+			clientConnections.get(targetAddress).sendMessage(message);
+		} else {
+			System.out.println("Target client not found, discarding message");
+		}
 	}
 	
 	/**
