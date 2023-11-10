@@ -6,7 +6,7 @@ import java.io.IOException;
 /**
  * A listener thread for a client connection. Continuously checks for new messages from a server
  * and sends them to the {@link Client}.
- * 
+ *
  * @author Sigve Bjørkedal
  */
 public class ClientListener extends Thread {
@@ -41,7 +41,7 @@ public class ClientListener extends Thread {
 	}
 
 	/**
-	 * Registers an incoming message to the client
+	 * Registers an incoming message to the client.
 	 *
 	 * @param message message to register
 	 */
@@ -50,7 +50,7 @@ public class ClientListener extends Thread {
 	}
 
 	/**
-	 * Attempts to close the connection
+	 * Attempts to close the connection.
 	 */
 	private void closeInput() {
 		try {

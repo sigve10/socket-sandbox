@@ -1,23 +1,32 @@
 package com.example.server;
 
+import com.example.server.commands.CommandSet;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-import com.example.server.commands.CommandSet;
-
+/**
+ * A connection from a {@link Server} to one individual client. Handles the connection independent
+ * of other connected clients.
+ */
 public class ClientConnection extends Thread {
 	private Socket clientSocket;
 	private BufferedReader input;
 	private CommandSet commandSet;
 	private PrintWriter replyOutput;
 
+	/**
+	 * Creates a new connection.
+	 *
+	 * @param commandSet the set of commands this connection should be able to interpret
+	 * @param clientSocket the socket this connection should listen to
+	 * @throws IOException if the connection fails
+	 */
 	public ClientConnection(CommandSet commandSet, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
 		this.commandSet = commandSet;
-		
 
 		input = new BufferedReader(
 			new InputStreamReader(
@@ -45,6 +54,12 @@ public class ClientConnection extends Thread {
 		this.close();
 	}
 
+	/**
+	 * Attempts to read and interpret a request from the client, as well as run it.
+	 *
+	 * @return a string response to the command, or an invalid command message if the command does
+	 *     not exist.
+	 */
 	private String readClientRequest() {
 		String message = null;
 		
@@ -61,8 +76,8 @@ public class ClientConnection extends Thread {
 	}
 
 	/**
-	 * Send a reply back to the client
-	 * 
+	 * Send a reply back to the client.
+	 *
 	 * @param message The message that will be sent to the client
 	 */
 	public void reply(String message) {
@@ -70,6 +85,9 @@ public class ClientConnection extends Thread {
 		System.out.println("Reply: *" + message + "* sent.");
 	}
 
+	/**
+	 * Attempts to close the connection.
+	 */
 	public void close() {
 		try {
 			this.clientSocket.close();

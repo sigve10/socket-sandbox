@@ -10,7 +10,7 @@ import java.util.LinkedList;
 /**
  * A client connection to a server. Capable of continuously reading information from the client and
  * sending messages.
- * 
+ *
  * @see Client#sendOutgoingMessage(String) sendOutgoingMessage
  * @see Client#nextIncomingMessage() nextIncomingMessage
  * 
@@ -23,7 +23,7 @@ public class Client {
 
 	/**
 	 * Creates a new client connection to a server.
-	 * 
+	 *
 	 * @param address the address of the server to connect to
 	 * @param port the port of the server to connect to
 	 * @throws IOException if connecting to the server fails
@@ -52,7 +52,7 @@ public class Client {
 
 	/**
 	 * Attempts to retrieve the earliest received message from the server.
-	 * 
+	 *
 	 * @return the earliest received message, or null if it does not exist.
 	 */
 	public String nextIncomingMessage() {

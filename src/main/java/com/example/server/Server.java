@@ -1,18 +1,16 @@
 package com.example.server;
 
-import java.io.IOException;
-import java.net.Socket;
-
 import com.example.server.commands.CommandSet;
-
+import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
 
 /**
  * A server running on the target machine. Can listen to incoming client connections and handle
  * clients independently. Once {@link Server#start() start()} is called, the server will be
  * occupied with a listening loop. The server can be shut down by calling {@link Server#shutDown()
  * shutDown()}
- * 
+ *
  * @author Sigve Bjørkedal
  */
 public class Server {
@@ -53,7 +51,7 @@ public class Server {
 
 	/**
 	 * Sets a list of commands that the server should be able to interpret and react to.
-	 * 
+	 *
 	 * @param commandSet a commandSet containing the commands the server should be able to handle
 	 */
 	public void setCommandSet(CommandSet commandSet) {
@@ -61,7 +59,7 @@ public class Server {
 	}
 	
 	/**
-	 * Attempts to shut down the server and close all client connections
+	 * Attempts to shut down the server and close all client connections.
 	 */
 	public static void shutDown() {
 		System.out.println("Shutting down servers");
