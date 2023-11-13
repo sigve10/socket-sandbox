@@ -65,6 +65,7 @@ public class Client {
 
     if (this.incomingMessages.peek() != null) {
       retval = this.incomingMessages.getFirst();
+      this.incomingMessages.removeFirst();
     }
 
     return retval;
@@ -81,17 +82,55 @@ public class Client {
     notifyObservers(message);
   }
 
+  /**
+   * Adds an observer to the client. The observer will be notified of new messages.
+   *
+   * @param observer The observer to add.
+   */
   public void addObserver(MessageObserver observer) {
     this.observers.add(observer);
   }
 
+  /**
+   * Removes an observer from the client. The observer will no longer receive message notifications.
+   *
+   * @param observer The observer to remove.
+   */
   public void removeObserver(MessageObserver observer) {
     this.observers.remove(observer);
   }
 
+  /**
+   * Notifies all registered observers with the given message. This method is called
+   * when a new message is received and needs to be communicated to all observers.
+   *
+   * @param message The message to be sent to the observers.
+   */
   private void notifyObservers(String message) {
     for (MessageObserver observer : this.observers) {
       observer.update(message);
+    }
+  }
+
+  /**
+   * Notifies observers about the disconnection.
+   */
+  public void notifyDisconnection() {
+    // Notify observers of disconnection
+    for (MessageObserver observer : this.observers) {
+      observer.update("Disconnected");
+    }
+    // Perform additional disconnection handling here if necessary
+  }
+
+  /**
+   * Notifies observers about an exception.
+   *
+   * @param e The exception that occurred.
+   */
+  public void notifyException(Exception e) {
+    for (MessageObserver observer : this.observers) {
+      observer.update("Exception occurred: " + e.getMessage());
     }
   }
 }
