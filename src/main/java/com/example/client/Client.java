@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * A client connection to a server. Capable of continuously reading information from the client and
@@ -13,65 +15,83 @@ import java.util.LinkedList;
  *
  * @see Client#sendOutgoingMessage(String) sendOutgoingMessage
  * @see Client#nextIncomingMessage() nextIncomingMessage
- * 
+ *
  * @author Sigve Bjørkedal
  */
 public class Client {
-	private LinkedList<String> incomingMessages;
-	private PrintWriter output;
-	private Socket socket;
 
-	/**
-	 * Creates a new client connection to a server.
-	 *
-	 * @param address the address of the server to connect to
-	 * @param port the port of the server to connect to
-	 * @throws IOException if connecting to the server fails
-	 */
-	public Client(String address, int port) throws IOException {
-		this.incomingMessages = new LinkedList<>();
-		this.socket =  new Socket(address, port);
+  private LinkedList<String> incomingMessages;
+  private PrintWriter output;
+  private Socket socket;
+  private List<MessageObserver> observers;
 
-		BufferedReader socketResponseStream = new BufferedReader(
-			new InputStreamReader(
-				this.socket.getInputStream()));
+  /**
+   * Creates a new client connection to a server.
+   *
+   * @param address the address of the server to connect to
+   * @param port the port of the server to connect to
+   * @throws IOException if connecting to the server fails
+   */
+  public Client(String address, int port) throws IOException {
+    this.incomingMessages = new LinkedList<>();
+    this.socket = new Socket(address, port);
+    this.observers = new ArrayList<>();
 
-		this.output = new PrintWriter(this.socket.getOutputStream(), true);
+    BufferedReader socketResponseStream = new BufferedReader(
+      new InputStreamReader(this.socket.getInputStream())
+    );
 
-		new ClientListener(this, socketResponseStream).start();
-	}
+    this.output = new PrintWriter(this.socket.getOutputStream(), true);
 
-	/**
-	 * Sends a message to the server.
-	 *
-	 * @param message message to send to the server.
-	 */
-	public void sendOutgoingMessage(String message) {
-		this.output.println(message);
-	}
+    new ClientListener(this, socketResponseStream).start();
+  }
 
-	/**
-	 * Attempts to retrieve the earliest received message from the server.
-	 *
-	 * @return the earliest received message, or null if it does not exist.
-	 */
-	public String nextIncomingMessage() {
-		String retval = null;
+  /**
+   * Sends a message to the server.
+   *
+   * @param message message to send to the server.
+   */
+  public void sendOutgoingMessage(String message) {
+    this.output.println(message);
+  }
 
-		if (this.incomingMessages.peek() != null) {
-			retval = this.incomingMessages.getFirst();
-		}
+  /**
+   * Attempts to retrieve the earliest received message from the server.
+   *
+   * @return the earliest received message, or null if it does not exist.
+   */
+  public String nextIncomingMessage() {
+    String retval = null;
 
-		return retval;
-	}
+    if (this.incomingMessages.peek() != null) {
+      retval = this.incomingMessages.getFirst();
+    }
 
-	/**
-	 * Registers a new message to the client. Can be read through {@link Client#nextIncomingMessage
-	 * nextIncomingMessage}.
-	 *
-	 * @param message the message to register.
-	 */
-	public void registerIncomingMessage(String message) {
-		this.incomingMessages.add(message);
-	}
+    return retval;
+  }
+
+  /**
+   * Registers a new message to the client. Can be read through {@link Client#nextIncomingMessage
+   * nextIncomingMessage}.
+   *
+   * @param message the message to register.
+   */
+  public void registerIncomingMessage(String message) {
+    this.incomingMessages.add(message);
+    notifyObservers(message);
+  }
+
+  public void addObserver(MessageObserver observer) {
+    this.observers.add(observer);
+  }
+
+  public void removeObserver(MessageObserver observer) {
+    this.observers.remove(observer);
+  }
+
+  private void notifyObservers(String message) {
+    for (MessageObserver observer : this.observers) {
+      observer.update(message);
+    }
+  }
 }
