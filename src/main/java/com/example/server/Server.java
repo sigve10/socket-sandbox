@@ -1,6 +1,5 @@
 package com.example.server;
 
-import com.example.server.commands.CommandSet;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,22 +14,21 @@ import java.util.HashMap;
  * @author Sigve Bjørkedal
  */
 public class Server {
-	private static boolean shutdownInitiated = false;
-
 	private final int port;
-	private CommandSet commandSet;
-	private ServerSocket server;
+	private ServerSocket genericServer;
 	private HashMap<String, ServerConnection> clientConnections;
+	private final Protocol protocol;
 
 	/**
-	 * Creates a new server on the given port.
+	 * Creates a new server on the given port, with the given protocol to interpret messages.
 	 *
-	 * @param port the listening port of the server
-	 * @throws IOException if server creation fails
+	 * @param port the port on which the server will listen for incoming connections.
+	 * @param protocol the protocol by which the server will interpret messages.
+	 * @throws IOException if creating the server fails.
 	 */
-	public Server(int port) throws IOException {
-		this.server = new ServerSocket(port);
-		this.commandSet = null;
+	public Server(int port, Protocol protocol) throws IOException {
+		this.genericServer = new ServerSocket(port);
+		this.protocol = protocol;
 		this.clientConnections = new HashMap<>();
 		this.port = port;
 	}
@@ -40,7 +38,7 @@ public class Server {
 	 */
 	public void start() {
 		System.out.println("Server started on port " + this.port);
-		new ServerIncomingConnectionListener(this, server).start();
+		new ServerIncomingConnectionListener(this, genericServer).start();
 	}
 
 	/**
@@ -50,19 +48,10 @@ public class Server {
 	 * @throws IOException if the connection is refused
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
-		ServerConnection connection = new ServerConnection(commandSet, incomingConnection);
+		ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
 		this.clientConnections.put(incomingConnection.getInetAddress().toString(), connection);
 		connection.start();
 		System.out.println("Connection from " + incomingConnection.getInetAddress());
-	}
-
-	/**
-	 * Sets a list of commands that the server should be able to interpret and react to.
-	 *
-	 * @param commandSet a commandSet containing the commands the server should be able to handle
-	 */
-	public void setCommandSet(CommandSet commandSet) {
-		this.commandSet = commandSet;
 	}
 
 	/**
@@ -87,13 +76,5 @@ public class Server {
 		} else {
 			System.out.println("Target client not found, discarding message");
 		}
-	}
-	
-	/**
-	 * Attempts to shut down the server and close all client connections.
-	 */
-	public static void shutDown() {
-		System.out.println("Shutting down servers");
-		Server.shutdownInitiated = true;
 	}
 }
