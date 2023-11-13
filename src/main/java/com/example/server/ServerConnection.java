@@ -1,6 +1,5 @@
 package com.example.server;
 
-import com.example.server.commands.CommandSet;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,19 +13,20 @@ import java.net.Socket;
 public class ServerConnection extends Thread {
 	private Socket clientSocket;
 	private BufferedReader input;
-	private CommandSet commandSet;
 	private PrintWriter replyOutput;
+	private Protocol protocol;
 
 	/**
-	 * Creates a new connection.
+	 * Creates a new threaded connection from a {@link Server} to a 
+	 * {@link com.example.client.Client Client}.
 	 *
-	 * @param commandSet the set of commands this connection should be able to interpret
-	 * @param clientSocket the socket this connection should listen to
-	 * @throws IOException if the connection fails
+	 * @param protocol the protocol on which the connection runs.
+	 * @param clientSocket the socket connection belonging to the client.
+	 * @throws IOException if a connection could not be established.
 	 */
-	public ServerConnection(CommandSet commandSet, Socket clientSocket) throws IOException {
+	public ServerConnection(Protocol protocol, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
-		this.commandSet = commandSet;
+		this.protocol = protocol;
 
 		input = new BufferedReader(
 			new InputStreamReader(
@@ -41,48 +41,32 @@ public class ServerConnection extends Thread {
 
 	@Override
 	public void run() {
-		String response;
-
-		do {
-			response = readClientRequest();
-			if (response != null) {
-				System.out.println("Server: Received message \"" + response + "\"");
-				sendMessage(response);
-			}
-		} while (response != null && !response.equalsIgnoreCase("Disconnect"));
-
-		this.close();
+		while (true) {
+			readClientRequest();
+		}
 	}
 
 	/**
-	 * Attempts to read and interpret a request from the client, as well as run it.
-	 *
-	 * @return a string response to the command, or an invalid command message if the command does
-	 *     not exist.
+	 * Attempts to read the next message from the client. The message is then sent to this
+	 * connection's {@link Protocol} for processing.
 	 */
-	private String readClientRequest() {
-		String message = null;
-		
+	private void readClientRequest() {
 		try {
 			String rawMessage = input.readLine();
 			System.out.println(" >>> " + rawMessage);
-
-			message = this.commandSet.tryToExecuteCommand(rawMessage);
+			this.protocol.receiveMessage(rawMessage);
 		} catch (IOException e) {
 			System.err.println("Could not handle request. " + e.getMessage());
 		}
-		
-		return message;
 	}
 
 	/**
-	 * Send a reply back to the client.
+	 * Sends a message to the client.
 	 *
-	 * @param message The message that will be sent to the client
+	 * @param message the message to send
 	 */
 	public void sendMessage(String message) {
 		replyOutput.println(message);
-		System.out.println("Reply: *" + message + "* sent.");
 	}
 
 	/**
