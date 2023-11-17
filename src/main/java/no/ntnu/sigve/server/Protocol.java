@@ -1,4 +1,4 @@
-package com.example.server;
+package no.ntnu.sigve.server;
 
 /**
  * An interface representing a protocol responsible for handling raw client/server messages.

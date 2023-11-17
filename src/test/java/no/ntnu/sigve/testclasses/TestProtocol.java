@@ -1,6 +1,6 @@
-package com.example.testclasses;
+package no.ntnu.sigve.testclasses;
 
-import com.example.server.Protocol;
+import no.ntnu.sigve.server.Protocol;
 /**
  * A class for testing the protocol interface.
  */

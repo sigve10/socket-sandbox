@@ -1,4 +1,4 @@
-package com.example.server;
+package no.ntnu.sigve.server;
 
 import java.io.BufferedReader;
 import java.io.IOException;

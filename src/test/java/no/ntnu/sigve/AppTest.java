@@ -1,4 +1,4 @@
-package com.example;
+package no.ntnu.sigve;
 
 import static org.junit.Assert.assertTrue;
 

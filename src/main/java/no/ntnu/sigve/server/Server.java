@@ -1,4 +1,4 @@
-package com.example.server;
+package no.ntnu.sigve.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -76,5 +76,9 @@ public class Server {
 		} else {
 			System.out.println("Target client not found, discarding message");
 		}
+	}
+
+	public static void main(String args[]) {
+		System.out.println("Yay");
 	}
 }

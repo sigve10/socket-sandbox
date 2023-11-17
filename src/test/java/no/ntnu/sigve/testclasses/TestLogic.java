@@ -1,6 +1,6 @@
-package com.example.testclasses;
+package no.ntnu.sigve.testclasses;
 
-import com.example.server.ServerConnection;
+import no.ntnu.sigve.server.ServerConnection;
 
 public class TestLogic  {
 	int testValue;

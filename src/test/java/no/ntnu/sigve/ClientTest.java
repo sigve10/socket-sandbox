@@ -1,13 +1,13 @@
-package com.example;
+package no.ntnu.sigve;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.example.client.Client;
-import com.example.server.Server;
-import com.example.testclasses.TestProtocol;
+import no.ntnu.sigve.client.Client;
+import no.ntnu.sigve.server.Server;
+import no.ntnu.sigve.testclasses.TestProtocol;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
