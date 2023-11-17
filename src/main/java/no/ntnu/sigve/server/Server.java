@@ -1,6 +1,7 @@
 package no.ntnu.sigve.server;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -16,7 +17,7 @@ import java.util.HashMap;
 public class Server {
 	private final int port;
 	private ServerSocket genericServer;
-	private HashMap<String, ServerConnection> clientConnections;
+	private HashMap<InetAddress, ServerConnection> clientConnections;
 	private final Protocol protocol;
 
 	/**
@@ -49,7 +50,7 @@ public class Server {
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
 		ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
-		this.clientConnections.put(incomingConnection.getInetAddress().toString(), connection);
+		this.clientConnections.put(incomingConnection.getInetAddress(), connection);
 		connection.start();
 		System.out.println("Connection from " + incomingConnection.getInetAddress());
 	}
@@ -70,15 +71,11 @@ public class Server {
 	 * @param targetAddress the address to which the message should be sent
 	 * @param message the message to be sent
 	 */
-	public void route(String targetAddress, String message) {
+	public void route(InetAddress targetAddress, String message) {
 		if (clientConnections.containsKey(targetAddress)) {
 			clientConnections.get(targetAddress).sendMessage(message);
 		} else {
 			System.out.println("Target client not found, discarding message");
 		}
-	}
-
-	public static void main(String args[]) {
-		System.out.println("Yay");
 	}
 }

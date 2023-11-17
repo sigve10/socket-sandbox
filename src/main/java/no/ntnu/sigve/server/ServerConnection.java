@@ -54,7 +54,7 @@ public class ServerConnection extends Thread {
 		try {
 			String rawMessage = input.readLine();
 			System.out.println(" >>> " + rawMessage);
-			this.protocol.receiveMessage(rawMessage);
+			this.protocol.receiveMessage(rawMessage, clientSocket.getInetAddress());
 		} catch (IOException e) {
 			System.err.println("Could not handle request. " + e.getMessage());
 		}
