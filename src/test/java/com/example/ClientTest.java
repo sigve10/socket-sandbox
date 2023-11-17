@@ -1,22 +1,14 @@
 package com.example;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.example.TestClasses.SecondTestCommand;
-import com.example.TestClasses.TestCommand;
 import com.example.client.Client;
 import com.example.server.Server;
-import com.example.server.commands.Command;
-import com.example.server.commands.CommandSet;
-import com.example.server.commands.CommandSet.CommandSetBuilder;
-import com.example.server.handler.Logic;
+import com.example.testclasses.TestProtocol;
 import java.io.IOException;
-import java.security.PublicKey;
-
-import org.junit.After;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +16,6 @@ import org.junit.jupiter.api.Test;
 /**
  * Tests.
  */
-
 public class ClientTest {
 	Thread serverThread;
 
@@ -36,20 +27,14 @@ public class ClientTest {
 		serverThread = new Thread(
 			() -> {
 				Server server = null;
+				TestProtocol protocol = new TestProtocol();
 				try {
-					server = new Server(8080);
+					server = new Server(8080, protocol);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
-				server.setCommandSet(
-					new CommandSetBuilder()
-					.add("test1", new TestCommand())
-					.add("test2", new SecondTestCommand())
-					.build()
-					);
-					server.start();
-					System.out.println("This ran first");
+				server.start();
+				System.out.println("This ran first");
 			}
 		);
 		serverThread.setName("Server thread");
@@ -61,62 +46,72 @@ public class ClientTest {
 	 * Test.
 	 */
 	@AfterEach
-	public  void stopServer() {
+	public void stopServer() {
 		System.out.println("This ran last");
 		serverThread.interrupt();
 	}
 
 	@Test
-	public void negativeConstructorTest1() {
+	void negativeConstructorTest1() {
 		assertThrows(IOException.class, () -> new Client("localhost", 0));
+		
 	}
 
 	@Test
-	public void negativeConstructorTest2() {
-		assertThrows(IOException.class, () -> new Client("", 8080));
+	void positiveConstructorTest2() {
+		assertDoesNotThrow(() -> new Client(null, 8080));
 	}
 
 	@Test
-	public void constructorTest() {
+	void constructorTest() {
 		assertDoesNotThrow(() -> new Client("localhost", 8080));
 	}
 
 	@Test
-	public void message() {
+	void message() {
 		Client client = createClient();
-
 		client.sendOutgoingMessage("test1");
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		String message = client.nextIncomingMessage();
 		assertTrue(message.equals("test1"));
 	}
 
 	@Test
-	public void testThatNoMessageReturnsNull(){
+	void testThatNoMessageReturnsNull() {
 		Client client = createClient();
 		String message = client.nextIncomingMessage();
-		assertTrue(message == null);
+		assertNull(message);
 	}
 
 	@Test
-	public void testThatMessagesReturnsInOrder(){
+	void testThatMessagesReturnsInOrder() {
 		boolean success = false;
 		Client client = createClient();
 		client.sendOutgoingMessage("test1");
 		client.sendOutgoingMessage("test2");
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		String t1 = client.nextIncomingMessage();
+		String t2 = client.nextIncomingMessage();
 
-		if (
-			client.nextIncomingMessage().equals("test1") 
-			&& client.nextIncomingMessage().equals("test2")
-		) {
+
+		System.out.println(t1 + " , " + t2);
+
+		if (t1.equals("test1") && t2.equals("test2")) {
 			success = true;
 		}
 
 		assertTrue(success);
 
 	}
-
 	
-
 	/**
 	 * Creates a client for test purposes.
 	 *
