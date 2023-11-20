@@ -1,11 +1,11 @@
 package no.ntnu.sigve;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import no.ntnu.sigve.client.Client;
 import no.ntnu.sigve.server.Server;
 import no.ntnu.sigve.testclasses.TestProtocol;
@@ -14,21 +14,27 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests.
  */
 public class ClientTest {
-	Thread serverThread;
-	Server server = null;
+	private static Thread serverThread;
+	private static Server server = null;
+
+	private String waitForMessage(Client client) {
+		return await()
+				.atMost(2, TimeUnit.SECONDS)
+				.until(client::nextIncomingMessage, Objects::nonNull);
+	}
 
 	/**
 	 * Test.
 	 */
-	@BeforeEach
-	public void initializeServer() {
+	@BeforeAll
+	public static void initializeServer() {
 		serverThread = new Thread(
 			() -> {
 				TestProtocol protocol = new TestProtocol();
@@ -44,7 +50,6 @@ public class ClientTest {
 		serverThread.setName("Server thread");
 		serverThread.start();
 	}
-
 
 	/**
 	 * Test.
@@ -75,13 +80,7 @@ public class ClientTest {
 	void message() {
 		Client client = createClient();
 		client.sendOutgoingMessage("test1");
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		String message = client.nextIncomingMessage();
-		assertTrue(message.equals("test1"));
+		assertEquals("test1", waitForMessage(client));
 	}
 
 	@Test
@@ -93,26 +92,18 @@ public class ClientTest {
 
 	@Test
 	void testThatMessagesReturnsInOrder() {
-		boolean success = false;
 		Client client = createClient();
 		client.sendOutgoingMessage("test1");
 		client.sendOutgoingMessage("test2");
-		try {
-			Thread.sleep(100);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		String t1 = client.nextIncomingMessage();
-		String t2 = client.nextIncomingMessage();
+		String t1 = waitForMessage(client);
+		String t2 = waitForMessage(client);
 
 
 		System.out.println(t1 + " , " + t2);
 
-		if (t1.equals("test1") && t2.equals("test2")) {
-			success = true;
-		}
 
-		assertTrue(success);
+		assertEquals("test1", t1);
+		assertEquals("test2", t2);
 
 	}
 	
@@ -134,26 +125,14 @@ public class ClientTest {
 	@Test
 	void testBroadcast() {
 		Client client = createClient();
-		this.server.broadcast("Hello");
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		assertEquals("Hello", client.nextIncomingMessage());
+		server.broadcast("Hello");
+		assertEquals("Hello", waitForMessage(client));
 	}
 
 	@Test
 	void testRoute() throws UnknownHostException {
 		Client client = createClient();
-		this.server.route(InetAddress.getByName("localhost"), "Hello");
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		assertEquals("Hello", client.nextIncomingMessage());
+		server.route(InetAddress.getByName("localhost"), "Hello");
+		assertEquals("Hello", waitForMessage(client));
 	}
 }
