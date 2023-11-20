@@ -39,26 +39,45 @@ public class ServerConnection extends Thread {
 		);
 	}
 
-	@Override
 	public void run() {
-		while (true) {
-			readClientRequest();
+		boolean keepRunning = true;
+		while (keepRunning) {
+			keepRunning = readClientRequest();
+		}
+		closeConnection();
+	}
+
+	 /**
+	 * Reads and processes the next message from the client. If a special
+	 * command (example "SEND") is detected, performs the associated action
+	 * (such as broadcasting a message to all clients). Otherwise, forwards
+	 * the message to the protocol for further processing.
+	 *
+	 * @return boolean indicating whether to continue running. Returns false
+	 * if the end of the stream is reached or an IOException occurs, signaling
+	 * the server connection to shut down.
+	 */
+	private boolean readClientRequest() {
+		try {
+			String rawMessage = input.readLine();
+			if (rawMessage != null) {
+				System.out.println(" >>> " + rawMessage);
+				if ("SEND".equalsIgnoreCase(rawMessage)) {
+					Server.getInstance().broadcast("Message from server to all clients");
+				} else {
+					this.protocol.receiveMessage(rawMessage, clientSocket.getInetAddress());
+				}
+				return true;
+			} else {
+				return false;
+			}
+		} catch (IOException e) {
+			System.err.println("Could not handle request: " + e.getMessage());
+			return false;
 		}
 	}
 
-	/**
-	 * Attempts to read the next message from the client. The message is then sent to this
-	 * connection's {@link Protocol} for processing.
-	 */
-	private void readClientRequest() {
-		try {
-			String rawMessage = input.readLine();
-			System.out.println(" >>> " + rawMessage);
-			this.protocol.receiveMessage(rawMessage, clientSocket.getInetAddress());
-		} catch (IOException e) {
-			System.err.println("Could not handle request. " + e.getMessage());
-		}
-	}
+
 
 	/**
 	 * Sends a message to the client.
@@ -80,4 +99,34 @@ public class ServerConnection extends Thread {
 			System.err.println("Could not close socket. " + e.getMessage());
 		}
 	}
+
+
+	/**
+	 * Closes the connection by shutting down the input stream, output stream,
+	 * and the socket. Ensures that all resources are properly released to
+	 * prevent resource leaks. This method should be called when the connection
+	 * is no longer needed or when an exception occurs.
+	 */
+	private void closeConnection() {
+		try {
+			if (input != null) {
+				input.close();
+			}
+		} catch (IOException e) {
+			System.err.println("Error closing input stream: " + e.getMessage());
+		}
+	
+		if (replyOutput != null) {
+			replyOutput.close();
+		}
+	
+		try {
+			if (clientSocket != null && !clientSocket.isClosed()) {
+				clientSocket.close();
+			}
+		} catch (IOException e) {
+			System.err.println("Error closing socket: " + e.getMessage());
+		}
+	}
+	
 }
