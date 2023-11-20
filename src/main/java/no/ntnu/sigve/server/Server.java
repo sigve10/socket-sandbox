@@ -19,6 +19,7 @@ public class Server {
 	private ServerSocket genericServer;
 	private HashMap<InetAddress, ServerConnection> clientConnections;
 	private final Protocol protocol;
+	private static Server instance;
 
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
@@ -32,6 +33,7 @@ public class Server {
 		this.protocol = protocol;
 		this.clientConnections = new HashMap<>();
 		this.port = port;
+		instance = this;
 	}
 
 	/**
@@ -55,13 +57,17 @@ public class Server {
 		System.out.println("Connection from " + incomingConnection.getInetAddress());
 	}
 
-	/**
-	 * Broadcasts a single message to all clients currently connected.
+
+	 /**
+	 * Broadcasts a given message to all currently connected clients. This method
+	 * iterates through each client connection and sends the specified message.
 	 *
-	 * @param message the message to be broadcasted
+	 * @param message The message to be broadcasted to all clients.
 	 */
 	public void broadcast(String message) {
-		clientConnections.values().forEach(client -> client.sendMessage(message));
+		for (ServerConnection connection : clientConnections.values()) {
+			connection.sendMessage(message);
+		}
 	}
 
 	/**
@@ -78,4 +84,14 @@ public class Server {
 			System.out.println("Target client not found, discarding message");
 		}
 	}
+
+
+	/**
+	 * Provides access to the current instance of the Server. 
+	 * @return The current instance of the Server.
+	 */
+	public static Server getInstance() {
+		return instance;
+	}
+	
 }
