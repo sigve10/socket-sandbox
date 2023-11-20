@@ -6,18 +6,17 @@ import java.util.UUID;
 /**
  * Represents a message sent between server and client.
  * 
- * <p>Should be extended by an implementer so that the type of the payload is always known.</p>
  * <ul><li>{@link Message#destination Destination} is the client to which the message should be
  * sent.</li>
  * <li>{@link Message#source Source} is the client from which the message was sent. This should be
  * set server-side to ensure global recognition of the source.</li>
- * <li>{@link Message#payload Payload} is the content of the message. When extending the message
- * class, the type of the payload should be defined</li></ul>
+ * <li>{@link Message#payload Payload} is the content of the message. A string containing the
+ * information to be sent.</li></ul>
  */
-public abstract class Message<T extends Serializable> implements Serializable {
+public class Message implements Serializable {
 	private UUID source;
 	private UUID destination;
-	private T payload;
+	private String payload;
 
 	/**
 	 * Creates a new message for the given destination.
@@ -62,9 +61,9 @@ public abstract class Message<T extends Serializable> implements Serializable {
 	/**
 	 * Sets the message's payload.
 	 *
-	 * @param payload an Object containing the message body
+	 * @param payload the body of the message
 	 */
-	protected final void setPayload(T payload) {
+	protected final void setPayload(String payload) {
 		if (this.payload != null) {
 			this.payload = payload;
 		} else {
@@ -77,7 +76,7 @@ public abstract class Message<T extends Serializable> implements Serializable {
 	 *
 	 * @return this message's payload
 	 */
-	public final T getPayload() {
+	public final String getPayload() {
 		return this.payload;
 	}
 }
