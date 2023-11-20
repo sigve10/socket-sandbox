@@ -1,10 +1,12 @@
 package no.ntnu.sigve.server;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.UUID;
 
 /**
  * A server running on the target machine. Can listen to incoming client connections and handle
@@ -51,11 +53,16 @@ public class Server {
 	 * @throws IOException if the connection is refused
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
-		ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
-		this.clientConnections.put(incomingConnection.getInetAddress(), connection);
-		connection.start();
-		System.out.println("Connection from " + incomingConnection.getInetAddress());
-	}
+        UUID sessionId = UUID.randomUUID();
+        ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
+        
+        PrintWriter out = new PrintWriter(incomingConnection.getOutputStream(), true);
+        out.println("SessionID:" + sessionId.toString());
+
+        this.clientConnections.put(incomingConnection.getInetAddress(), connection);
+        connection.start();
+        System.out.println("Connection from " + incomingConnection.getInetAddress() + ", Session ID: " + sessionId);
+    }
 
 
 	 /**
