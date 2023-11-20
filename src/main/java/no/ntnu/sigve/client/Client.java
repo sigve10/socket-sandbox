@@ -25,27 +25,35 @@ public class Client {
 	private PrintWriter output;
 	private Socket socket;
 	private List<MessageObserver> observers;
+	private String sessionId;
 
 	/**
-	 * Creates a new client connection to a server.
-	 *
-	 * @param address the address of the server to connect to
-	 * @param port the port of the server to connect to
-	 * @throws IOException if connecting to the server fails
-	 */
-	public Client(String address, int port) throws IOException {
-		this.incomingMessages = new LinkedList<>();
-		this.socket = new Socket(address, port);
-		this.observers = new ArrayList<>();
+     * Creates a new client connection to a server.
+     *
+     * @param address the address of the server to connect to
+     * @param port the port of the server to connect to
+     * @throws IOException if connecting to the server fails
+     */
+    public Client(String address, int port) throws IOException {
+        this.incomingMessages = new LinkedList<>();
+        this.socket = new Socket(address, port);
+        this.observers = new ArrayList<>();
 
-		BufferedReader socketResponseStream = new BufferedReader(
-		new InputStreamReader(this.socket.getInputStream())
-		);
+        BufferedReader socketResponseStream = new BufferedReader(
+            new InputStreamReader(this.socket.getInputStream())
+        );
 
-		this.output = new PrintWriter(this.socket.getOutputStream(), true);
+        this.output = new PrintWriter(this.socket.getOutputStream(), true);
+        String uuidString = socketResponseStream.readLine();
+        if (uuidString != null && uuidString.startsWith("SessionID:")) {
+            this.sessionId = uuidString.substring("SessionID:".length());
+            System.out.println("Received session ID: " + this.sessionId);
+        } else {
+            System.err.println("Session ID was not received properly.");
+        }
 
-		new ClientListener(this, socketResponseStream).start();
-	}
+        new ClientListener(this, socketResponseStream).start();
+    }
 	/**
 	 * Sends a message to the server.
 	 *
