@@ -1,5 +1,6 @@
 package no.ntnu.sigve;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -9,6 +10,9 @@ import no.ntnu.sigve.client.Client;
 import no.ntnu.sigve.server.Server;
 import no.ntnu.sigve.testclasses.TestProtocol;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,7 @@ import org.junit.jupiter.api.Test;
  */
 public class ClientTest {
 	Thread serverThread;
+	Server server = null;
 
 	/**
 	 * Test.
@@ -26,7 +31,6 @@ public class ClientTest {
 	public void initializeServer() {
 		serverThread = new Thread(
 			() -> {
-				Server server = null;
 				TestProtocol protocol = new TestProtocol();
 				try {
 					server = new Server(8080, protocol);
@@ -72,7 +76,7 @@ public class ClientTest {
 		Client client = createClient();
 		client.sendOutgoingMessage("test1");
 		try {
-			Thread.sleep(100);
+			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -125,5 +129,31 @@ public class ClientTest {
 			e.printStackTrace();
 		}
 		return client;
+	}
+
+	@Test
+	void testBroadcast() {
+		Client client = createClient();
+		this.server.broadcast("Hello");
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		assertEquals("Hello", client.nextIncomingMessage());
+	}
+
+	@Test
+	void testRoute() throws UnknownHostException {
+		Client client = createClient();
+		this.server.route(InetAddress.getByName("localhost"), "Hello");
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		assertEquals("Hello", client.nextIncomingMessage());
 	}
 }
