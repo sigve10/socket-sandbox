@@ -3,8 +3,13 @@ package no.ntnu.sigve.server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.UUID;
+
+import no.ntnu.sigve.communication.Message;
 
 /**
  * A connection from a {@link Server} to one individual client. Handles the connection independent
@@ -12,9 +17,10 @@ import java.net.Socket;
  */
 public class ServerConnection extends Thread {
 	private Socket clientSocket;
-	private BufferedReader input;
-	private PrintWriter replyOutput;
+	private ObjectInputStream input;
+	private ObjectOutputStream replyOutput;
 	private Protocol protocol;
+	private UUID address;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a 
@@ -24,21 +30,16 @@ public class ServerConnection extends Thread {
 	 * @param clientSocket the socket connection belonging to the client.
 	 * @throws IOException if a connection could not be established.
 	 */
-	public ServerConnection(Protocol protocol, Socket clientSocket) throws IOException {
+	public ServerConnection(Protocol protocol, Socket clientSocket, UUID address) throws IOException {
 		this.clientSocket = clientSocket;
 		this.protocol = protocol;
+		this.address = address;
 
-		input = new BufferedReader(
-			new InputStreamReader(
-				clientSocket.getInputStream()
-			)
-		);
-
-		replyOutput = new PrintWriter(
-			clientSocket.getOutputStream(), true
-		);
+		input = new ObjectInputStream(clientSocket.getInputStream());
+		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
 	}
 
+	@Override
 	public void run() {
 		boolean keepRunning = true;
 		while (keepRunning) {
@@ -58,25 +59,26 @@ public class ServerConnection extends Thread {
 	 * the server connection to shut down.
 	 */
 	private boolean readClientRequest() {
-		try {
-			String rawMessage = input.readLine();
-			if (rawMessage != null) {
-				System.out.println(" >>> " + rawMessage);
-				if ("SEND".equalsIgnoreCase(rawMessage)) {
-					Server.getInstance().broadcast("Message from server to all clients");
-				} else {
-					this.protocol.receiveMessage(rawMessage, clientSocket.getInetAddress());
-				}
-				return true;
-			} else {
-				return false;
-			}
-		} catch (IOException e) {
-			System.err.println("Could not handle request: " + e.getMessage());
-			return false;
-		}
-	}
+		Message message = null;
+		boolean retval = false;
 
+		try {
+			message = (Message) input.readObject();
+		} catch (ClassCastException|ClassNotFoundException e) {
+			System.err.println("Discarding uncastable request from client. " + e.getMessage());
+			retval = true;
+		} catch (IOException e) {
+			System.err.println("Could not handle request. " + e.getMessage());
+		}
+		
+		if (message != null) {
+			message.assignSource(this.address);
+			this.protocol.receiveMessage(message);
+			retval = true;
+		}
+		
+		return retval;
+	}
 
 
 	/**
@@ -84,8 +86,12 @@ public class ServerConnection extends Thread {
 	 *
 	 * @param message the message to send
 	 */
-	public void sendMessage(String message) {
-		replyOutput.println(message);
+	public void sendMessage(Message message) {
+		try {
+			replyOutput.writeObject(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -116,8 +122,12 @@ public class ServerConnection extends Thread {
 			System.err.println("Error closing input stream: " + e.getMessage());
 		}
 	
-		if (replyOutput != null) {
-			replyOutput.close();
+		try {
+			if (replyOutput != null) {
+				replyOutput.close();
+			}
+		} catch (IOException e) {
+			System.err.println("Error closing output stream: " + e.getMessage());
 		}
 	
 		try {

@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.UUID;
 
+import no.ntnu.sigve.communication.Message;
+
 /**
  * A server running on the target machine. Can listen to incoming client connections and handle
  * clients independently. Once {@link Server#start() start()} is called, the server will be
@@ -19,9 +21,9 @@ import java.util.UUID;
 public class Server {
 	private final int port;
 	private ServerSocket genericServer;
-	private HashMap<InetAddress, ServerConnection> clientConnections;
+	private HashMap<UUID, InetAddress> uuidToAddressMap;
+	private HashMap<UUID, ServerConnection> clientConnections;
 	private final Protocol protocol;
-	private static Server instance;
 
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
@@ -33,9 +35,9 @@ public class Server {
 	public Server(int port, Protocol protocol) throws IOException {
 		this.genericServer = new ServerSocket(port);
 		this.protocol = protocol;
+		this.uuidToAddressMap = new HashMap<>();
 		this.clientConnections = new HashMap<>();
 		this.port = port;
-		instance = this;
 	}
 
 	/**
@@ -53,16 +55,14 @@ public class Server {
 	 * @throws IOException if the connection is refused
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
-        UUID sessionId = UUID.randomUUID();
-        ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
-        
-        PrintWriter out = new PrintWriter(incomingConnection.getOutputStream(), true);
-        out.println("SessionID:" + sessionId.toString());
+		UUID sessionId = UUID.randomUUID();
+		ServerConnection connection = new ServerConnection(this.protocol, incomingConnection, sessionId);
 
-        this.clientConnections.put(incomingConnection.getInetAddress(), connection);
-        connection.start();
-        System.out.println("Connection from " + incomingConnection.getInetAddress() + ", Session ID: " + sessionId);
-    }
+		this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
+		this.clientConnections.put(sessionId, connection);
+		
+		connection.start();
+	}
 
 
 	 /**
@@ -71,7 +71,7 @@ public class Server {
 	 *
 	 * @param message The message to be broadcasted to all clients.
 	 */
-	public void broadcast(String message) {
+	public void broadcast(Message message) {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
@@ -84,21 +84,12 @@ public class Server {
 	 * @param targetAddress the address to which the message should be sent
 	 * @param message the message to be sent
 	 */
-	public void route(InetAddress targetAddress, String message) {
-		if (clientConnections.containsKey(targetAddress)) {
-			clientConnections.get(targetAddress).sendMessage(message);
+	public void route(Message message) {
+		if (clientConnections.containsKey(message.getDestination())) {
+			clientConnections.get(message.getDestination()).sendMessage(message);
 		} else {
 			System.out.println("Target client not found, discarding message");
 		}
-	}
-
-
-	/**
-	 * Provides access to the current instance of the Server. 
-	 * @return The current instance of the Server.
-	 */
-	public static Server getInstance() {
-		return instance;
 	}
 	
 }

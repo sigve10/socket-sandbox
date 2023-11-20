@@ -2,6 +2,8 @@ package no.ntnu.sigve.server;
 
 import java.net.InetAddress;
 
+import no.ntnu.sigve.communication.Message;
+
 /**
  * An interface representing a protocol responsible for handling raw client/server messages.
  * When creating a {@link Server}, a protocol should be included to handle all incoming messages.
@@ -13,5 +15,5 @@ public interface Protocol {
 	 *
 	 * @param message the raw message from the client.
 	 */
-	public void receiveMessage(String message, InetAddress sourceAddress);
+	public void receiveMessage(Message message);
 }
