@@ -13,5 +13,5 @@ public interface Protocol {
 	 *
 	 * @param message the raw message from the client.
 	 */
-	public void receiveMessage(String message, InetAddress sourceAddress);
+	public void receiveMessage(Server server, String message, InetAddress sourceAddress);
 }

@@ -14,7 +14,7 @@ public class ServerConnection extends Thread {
 	private Socket clientSocket;
 	private BufferedReader input;
 	private PrintWriter replyOutput;
-	private Protocol protocol;
+	private Server server;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a 
@@ -24,9 +24,9 @@ public class ServerConnection extends Thread {
 	 * @param clientSocket the socket connection belonging to the client.
 	 * @throws IOException if a connection could not be established.
 	 */
-	public ServerConnection(Protocol protocol, Socket clientSocket) throws IOException {
+	public ServerConnection(Server server, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
-		this.protocol = protocol;
+		this.server = server;
 
 		input = new BufferedReader(
 			new InputStreamReader(
@@ -39,6 +39,7 @@ public class ServerConnection extends Thread {
 		);
 	}
 
+	@Override
 	public void run() {
 		boolean keepRunning = true;
 		while (keepRunning) {
@@ -57,20 +58,11 @@ public class ServerConnection extends Thread {
 	 * if the end of the stream is reached or an IOException occurs, signaling
 	 * the server connection to shut down.
 	 */
-	private boolean readClientRequest() {
+	private synchronized boolean readClientRequest() {
 		try {
 			String rawMessage = input.readLine();
-			if (rawMessage != null) {
-				System.out.println(" >>> " + rawMessage);
-				if ("SEND".equalsIgnoreCase(rawMessage)) {
-					Server.getInstance().broadcast("Message from server to all clients");
-				} else {
-					this.protocol.receiveMessage(rawMessage, clientSocket.getInetAddress());
-				}
-				return true;
-			} else {
-				return false;
-			}
+			this.server.registerIncomingMessage(rawMessage);
+			return true;
 		} catch (IOException e) {
 			System.err.println("Could not handle request: " + e.getMessage());
 			return false;

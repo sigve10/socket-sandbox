@@ -21,7 +21,6 @@ public class Server {
 	private ServerSocket genericServer;
 	private HashMap<InetAddress, ServerConnection> clientConnections;
 	private final Protocol protocol;
-	private static Server instance;
 
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
@@ -35,7 +34,6 @@ public class Server {
 		this.protocol = protocol;
 		this.clientConnections = new HashMap<>();
 		this.port = port;
-		instance = this;
 	}
 
 	/**
@@ -54,8 +52,8 @@ public class Server {
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
         UUID sessionId = UUID.randomUUID();
-        ServerConnection connection = new ServerConnection(this.protocol, incomingConnection);
-        
+        ServerConnection connection = new ServerConnection(this, incomingConnection);
+
         PrintWriter out = new PrintWriter(incomingConnection.getOutputStream(), true);
         out.println("SessionID:" + sessionId.toString());
 
@@ -92,13 +90,7 @@ public class Server {
 		}
 	}
 
-
-	/**
-	 * Provides access to the current instance of the Server. 
-	 * @return The current instance of the Server.
-	 */
-	public static Server getInstance() {
-		return instance;
+	public void registerIncomingMessage(String message) {
+		this.protocol.receiveMessage(this, message, null);
 	}
-	
 }
