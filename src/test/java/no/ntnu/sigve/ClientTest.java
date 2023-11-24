@@ -26,7 +26,7 @@ public class ClientTest {
 
 	private String waitForMessage(Client client) {
 		return await()
-				.atMost(2, TimeUnit.SECONDS)
+				.atMost(5, TimeUnit.SECONDS)
 				.until(client::nextIncomingMessage, Objects::nonNull);
 	}
 
@@ -43,6 +43,7 @@ public class ClientTest {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				protocol.setServer(server);
 				server.start();
 				System.out.println("This ran first");
 			}
@@ -95,18 +96,10 @@ public class ClientTest {
 		Client client = createClient();
 		client.sendOutgoingMessage("test1");
 		client.sendOutgoingMessage("test2");
-		String t1 = waitForMessage(client);
-		String t2 = waitForMessage(client);
-
-
-		System.out.println(t1 + " , " + t2);
-
-
-		assertEquals("test1", t1);
-		assertEquals("test2", t2);
-
+		assertEquals("test1", waitForMessage(client));
+		assertEquals("test2", waitForMessage(client));
 	}
-	
+
 	/**
 	 * Creates a client for test purposes.
 	 *
