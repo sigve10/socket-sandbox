@@ -3,7 +3,6 @@ package no.ntnu.sigve;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import no.ntnu.sigve.client.Client;
@@ -20,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests.
  */
 public class ClientTest {
-	private static Thread serverThread;
 	private static Server server = null;
 	private static Client client;
 
@@ -56,7 +54,6 @@ public class ClientTest {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-    protocol.setServer(server);
 		server.start();
 		System.out.println("This ran first");
 		client = createClient();
@@ -68,7 +65,6 @@ public class ClientTest {
 	@AfterEach
 	public void stopServer() {
 		System.out.println("This ran last");
-		client.close();
 		server.close();
 	}
 
@@ -118,7 +114,7 @@ public class ClientTest {
 	}
 
 	@Test
-	void testRoute() throws UnknownHostException {
+	void testRoute() {
 		server.route(new Message<>(client.getSessionId(), "Hello"));
 		assertEquals("Hello", waitForMessage(client).getPayload());
 	}

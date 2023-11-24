@@ -16,20 +16,26 @@ public class ServerConnection extends Thread {
 	private final Socket clientSocket;
 	private final ObjectInputStream input;
 	private final ObjectOutputStream replyOutput;
-  private final Server server;
+	private final Server server;
+	private final UUID clientUuid;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a
 	 * {@link no.ntnu.sigve.client.Client}.
 	 *
-	 * @param protocol     the protocol on which the connection runs.
+	 * @param server       the connected server
 	 * @param clientSocket the socket connection belonging to the client.
-	 * @param address      the UUID
+	 * @param clientUuid   the UUID of the connected client.
 	 * @throws IOException if a connection could not be established.
 	 */
-	public ServerConnection(Server server, Socket clientSocket) throws IOException {
+	public ServerConnection(
+			Server server,
+			Socket clientSocket,
+			UUID clientUuid
+	) throws IOException {
 		this.clientSocket = clientSocket;
 		this.server = server;
+		this.clientUuid = clientUuid;
 
 		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
 		input = new ObjectInputStream(clientSocket.getInputStream());
@@ -51,8 +57,8 @@ public class ServerConnection extends Thread {
 	 * the message to the protocol for further processing.
 	 *
 	 * @return boolean indicating whether to continue running. Returns false
-	 *         if the end of the stream is reached or an IOException occurs, signaling
-	 *         the server connection to shut down.
+	 * 		if the end of the stream is reached or an IOException occurs, signaling
+	 * 		the server connection to shut down.
 	 */
 	private synchronized boolean readClientRequest() {
 		Message<? extends Serializable> message = null;
@@ -68,9 +74,8 @@ public class ServerConnection extends Thread {
 		}
 
 		if (message != null) {
-      server.registerIncomingMessage(message);
-			message.assignSource(this.address);
-			protocol.receiveMessage(message);
+			message.assignSource(clientUuid);
+			server.registerIncomingMessage(message);
 			retval = true;
 		}
 

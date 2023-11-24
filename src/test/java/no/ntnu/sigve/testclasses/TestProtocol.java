@@ -1,7 +1,5 @@
 package no.ntnu.sigve.testclasses;
 
-import java.io.Serializable;
-
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.server.Protocol;
 import no.ntnu.sigve.server.Server;
@@ -10,8 +8,6 @@ import no.ntnu.sigve.server.Server;
  * A class for testing the protocol interface.
  */
 public class TestProtocol implements Protocol {
-	Server server;
-
 	/**
 	 * Class constructor.
 	 *
@@ -19,18 +15,14 @@ public class TestProtocol implements Protocol {
 	public TestProtocol() {
 	}
 
-	public void setServer(Server server) {
-		this.server = server;
-	}
-
 	@Override
-	public void receiveMessage(Message<? extends Serializable> message) {
+	public void receiveMessage(Server server, Message<?> message) {
 		switch ((String) message.getPayload()) {
-			case "1" -> server.route(address, "test1");
-			case "2" -> server.route(address, "test2");
-      default -> {
-        //Do nothing
-      }
-    }
+			case "1" -> server.route(message);
+			case "2" -> server.route(message);
+			default -> {
+				//Do nothing
+			}
+		}
 	}
 }

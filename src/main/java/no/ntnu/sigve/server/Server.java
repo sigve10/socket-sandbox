@@ -48,10 +48,11 @@ public class Server {
 	}
 
 	/**
-	 * Closes the server.
+	 * Closes the server, and terminates all connected clients.
 	 */
 	public void close() {
 		try {
+			clientConnections.values().forEach(ServerConnection::close);
 			genericServer.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -66,7 +67,7 @@ public class Server {
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
 		UUID sessionId = UUID.randomUUID();
-		ServerConnection connection = new ServerConnection(this, incomingConnection);
+		ServerConnection connection = new ServerConnection(this, incomingConnection, sessionId);
 		connection.sendMessage(new UuidMessage(sessionId));
 
 		this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
@@ -101,6 +102,7 @@ public class Server {
 			System.out.println("Target client not found, discarding message");
 		}
 	}
+
 	public void registerIncomingMessage(Message<?> message) {
 		this.protocol.receiveMessage(this, message);
 	}
