@@ -1,7 +1,8 @@
 package no.ntnu.sigve.testclasses;
 
-import java.net.InetAddress;
+import java.io.Serializable;
 
+import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.server.Protocol;
 /**
  * A class for testing the protocol interface.
@@ -18,12 +19,12 @@ public class TestProtocol implements Protocol {
 	}
 
 	@Override
-	public void receiveMessage(String message, InetAddress address) {
-		switch (message) {
+	public void receiveMessage(Message<? extends Serializable> message) {
+		switch ((String) message.getPayload()) {
 			case "1":
-				
+
 				break;
-		
+
 			case "2":
 
 
@@ -31,5 +32,4 @@ public class TestProtocol implements Protocol {
 				break;
 		}
 	}
-	
 }

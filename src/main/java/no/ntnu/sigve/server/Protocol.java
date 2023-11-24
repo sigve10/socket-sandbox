@@ -1,7 +1,6 @@
 package no.ntnu.sigve.server;
 
-import java.net.InetAddress;
-
+import java.io.Serializable;
 import no.ntnu.sigve.communication.Message;
 
 /**
@@ -15,5 +14,5 @@ public interface Protocol {
 	 *
 	 * @param message the raw message from the client.
 	 */
-	public void receiveMessage(Message message);
+	void receiveMessage(Message<? extends Serializable> message);
 }

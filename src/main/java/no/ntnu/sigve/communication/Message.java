@@ -13,18 +13,29 @@ import java.util.UUID;
  * <li>{@link Message#payload Payload} is the content of the message. A string containing the
  * information to be sent.</li></ul>
  */
-public class Message implements Serializable {
+public class Message<T extends Serializable> implements Serializable {
 	private UUID source;
 	private UUID destination;
-	private String payload;
+	private T payload;
+
+	/**
+	 * Creates a new message for the given destination.
+	 *
+	 * @param destination the destination of the message
+	 * @param payload the body of the message
+	 */
+	public Message(UUID destination, T payload) {
+		this.destination = destination;
+		this.payload = payload;
+	}
 
 	/**
 	 * Creates a new message for the given destination.
 	 *
 	 * @param destination the destination of the message
 	 */
-	protected Message(UUID destination) {
-		this.destination = destination;
+	public Message(UUID destination) {
+		this(destination, null);
 	}
 
 	/**
@@ -33,7 +44,7 @@ public class Message implements Serializable {
 	 * @param source the address of the client from which the message was sent
 	 */
 	public final void assignSource(UUID source) {
-		if (this.source != null) {
+		if (this.source == null) {
 			this.source = source;
 		} else {
 			System.err.println("Could not change source: Message already has a source.");
@@ -63,8 +74,8 @@ public class Message implements Serializable {
 	 *
 	 * @param payload the body of the message
 	 */
-	protected final void setPayload(String payload) {
-		if (this.payload != null) {
+	public final void setPayload(T payload) {
+		if (this.payload == null) {
 			this.payload = payload;
 		} else {
 			System.err.println("Could not set payload: Message already has a payload.");
@@ -76,7 +87,7 @@ public class Message implements Serializable {
 	 *
 	 * @return this message's payload
 	 */
-	public final String getPayload() {
+	public final T getPayload() {
 		return this.payload;
 	}
 }

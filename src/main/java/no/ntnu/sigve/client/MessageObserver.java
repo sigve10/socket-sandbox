@@ -1,5 +1,8 @@
 package no.ntnu.sigve.client;
 
+import java.io.Serializable;
+import no.ntnu.sigve.communication.Message;
+
 public interface MessageObserver {
-    void update(String message);
+	void update(Message<? extends Serializable> message);
 }
