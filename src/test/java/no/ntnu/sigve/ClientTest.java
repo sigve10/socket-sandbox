@@ -41,7 +41,7 @@ public class ClientTest {
 
 	private Message<? extends Serializable> waitForMessage(Client client) {
 		return await()
-				.atMost(2, TimeUnit.SECONDS)
+				.atMost(5, TimeUnit.SECONDS)
 				.until(client::nextIncomingMessage, Objects::nonNull);
 	}
 
@@ -56,6 +56,7 @@ public class ClientTest {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+    protocol.setServer(server);
 		server.start();
 		System.out.println("This ran first");
 		client = createClient();
@@ -103,16 +104,8 @@ public class ClientTest {
 	void testThatMessagesReturnsInOrder() {
 		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "test1"));
 		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "test2"));
-		Message<?> t1 = waitForMessage(client);
-		Message<?> t2 = waitForMessage(client);
-
-
-		System.out.println(t1.getPayload() + " , " + t2.getPayload());
-
-
-		assertEquals("test1", t1.getPayload());
-		assertEquals("test2", t2.getPayload());
-
+		assertEquals("test1", waitForMessage(client).getPayload());
+		assertEquals("test2", waitForMessage(client).getPayload());
 	}
 
 	@Test

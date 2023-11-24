@@ -14,5 +14,5 @@ public interface Protocol {
 	 *
 	 * @param message the raw message from the client.
 	 */
-	void receiveMessage(Message<? extends Serializable> message);
+	public void receiveMessage(Server server, Message<?> message);
 }

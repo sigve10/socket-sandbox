@@ -66,8 +66,7 @@ public class Server {
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
 		UUID sessionId = UUID.randomUUID();
-		ServerConnection connection =
-				new ServerConnection(this.protocol, incomingConnection, sessionId);
+		ServerConnection connection = new ServerConnection(this, incomingConnection);
 		connection.sendMessage(new UuidMessage(sessionId));
 
 		this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
@@ -102,5 +101,7 @@ public class Server {
 			System.out.println("Target client not found, discarding message");
 		}
 	}
-	
+	public void registerIncomingMessage(Message<?> message) {
+		this.protocol.receiveMessage(this, message);
+	}
 }

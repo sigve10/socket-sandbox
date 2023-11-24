@@ -16,8 +16,7 @@ public class ServerConnection extends Thread {
 	private final Socket clientSocket;
 	private final ObjectInputStream input;
 	private final ObjectOutputStream replyOutput;
-	private final Protocol protocol;
-	private final UUID address;
+  private final Server server;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a
@@ -28,14 +27,9 @@ public class ServerConnection extends Thread {
 	 * @param address      the UUID
 	 * @throws IOException if a connection could not be established.
 	 */
-	public ServerConnection(
-			Protocol protocol,
-			Socket clientSocket,
-			UUID address
-	) throws IOException {
+	public ServerConnection(Server server, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
-		this.protocol = protocol;
-		this.address = address;
+		this.server = server;
 
 		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
 		input = new ObjectInputStream(clientSocket.getInputStream());
@@ -60,7 +54,7 @@ public class ServerConnection extends Thread {
 	 *         if the end of the stream is reached or an IOException occurs, signaling
 	 *         the server connection to shut down.
 	 */
-	private boolean readClientRequest() {
+	private synchronized boolean readClientRequest() {
 		Message<? extends Serializable> message = null;
 		boolean retval = false;
 
@@ -74,8 +68,9 @@ public class ServerConnection extends Thread {
 		}
 
 		if (message != null) {
+      server.registerIncomingMessage(message);
 			message.assignSource(this.address);
-			this.protocol.receiveMessage(message);
+			protocol.receiveMessage(message);
 			retval = true;
 		}
 
