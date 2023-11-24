@@ -8,8 +8,8 @@ import java.net.Socket;
  * A thread for listening and attempting to accept incoming client connections.
  */
 public class ServerIncomingConnectionListener extends Thread {
-	private Server server;
-	private ServerSocket serverSocket;
+	private final Server server;
+	private final ServerSocket serverSocket;
 
 	/**
 	 * Creates a new incoming connection listener for a {@link Server}.
@@ -24,14 +24,16 @@ public class ServerIncomingConnectionListener extends Thread {
 
 	@Override
 	public void run() {
-		do {
+		while (!serverSocket.isClosed()) {
 			try {
 				Socket client = this.serverSocket.accept();
 				this.attemptToAcceptConnection(client);
 			} catch (IOException e) {
-				e.printStackTrace();
+				if (!serverSocket.isClosed()) {
+					e.printStackTrace();
+				}
 			}
-		} while (true);
+		}
 	}
 
 	/**

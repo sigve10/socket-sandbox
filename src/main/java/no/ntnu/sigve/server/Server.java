@@ -1,25 +1,27 @@
 package no.ntnu.sigve.server;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.communication.UuidMessage;
 
 /**
  * A server running on the target machine. Can listen to incoming client connections and handle
  * clients independently. Once {@link Server#start() start()} is called, the server will be
- * occupied with a listening loop. The server can be shut down by calling {@link Server#shutDown()
- * shutDown()}
+ * occupied with a listening loop. The server can be shut down by calling {@link Server#close()}
  *
  * @author Sigve Bjørkedal
  */
 public class Server {
 	private final int port;
-	private ServerSocket genericServer;
-	private HashMap<InetAddress, ServerConnection> clientConnections;
+	private final ServerSocket genericServer;
+	private final Map<UUID, InetAddress> uuidToAddressMap;
+	private final Map<UUID, ServerConnection> clientConnections;
 	private final Protocol protocol;
 
 	/**
@@ -32,6 +34,7 @@ public class Server {
 	public Server(int port, Protocol protocol) throws IOException {
 		this.genericServer = new ServerSocket(port);
 		this.protocol = protocol;
+		this.uuidToAddressMap = new HashMap<>();
 		this.clientConnections = new HashMap<>();
 		this.port = port;
 	}
@@ -45,31 +48,41 @@ public class Server {
 	}
 
 	/**
+	 * Closes the server.
+	 */
+	public void close() {
+		try {
+			genericServer.close();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+	}
+
+	/**
 	 * Attempts to accept an incoming connection and create a handler for it.
 	 *
 	 * @param incomingConnection the client requesting a connection
 	 * @throws IOException if the connection is refused
 	 */
 	public void acceptIncomingConnection(Socket incomingConnection) throws IOException {
-        UUID sessionId = UUID.randomUUID();
-        ServerConnection connection = new ServerConnection(this, incomingConnection);
+		UUID sessionId = UUID.randomUUID();
+		ServerConnection connection = new ServerConnection(this, incomingConnection);
+		connection.sendMessage(new UuidMessage(sessionId));
 
-        PrintWriter out = new PrintWriter(incomingConnection.getOutputStream(), true);
-        out.println("SessionID:" + sessionId.toString());
-
-        this.clientConnections.put(incomingConnection.getInetAddress(), connection);
-        connection.start();
-        System.out.println("Connection from " + incomingConnection.getInetAddress() + ", Session ID: " + sessionId);
-    }
+		this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
+		this.clientConnections.put(sessionId, connection);
+		
+		connection.start();
+	}
 
 
-	 /**
+	/**
 	 * Broadcasts a given message to all currently connected clients. This method
 	 * iterates through each client connection and sends the specified message.
 	 *
 	 * @param message The message to be broadcasted to all clients.
 	 */
-	public void broadcast(String message) {
+	public void broadcast(Message<?> message) {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
@@ -79,18 +92,16 @@ public class Server {
 	 * Routes a message to one specific target address. If the target does not exist, the message
 	 * is discarded.
 	 *
-	 * @param targetAddress the address to which the message should be sent
 	 * @param message the message to be sent
 	 */
-	public void route(InetAddress targetAddress, String message) {
-		if (clientConnections.containsKey(targetAddress)) {
-			clientConnections.get(targetAddress).sendMessage(message);
+	public void route(Message<?> message) {
+		if (clientConnections.containsKey(message.getDestination())) {
+			clientConnections.get(message.getDestination()).sendMessage(message);
 		} else {
 			System.out.println("Target client not found, discarding message");
 		}
 	}
-
-	public void registerIncomingMessage(String message) {
-		this.protocol.receiveMessage(this, message, null);
+	public void registerIncomingMessage(Message<?> message) {
+		this.protocol.receiveMessage(this, message);
 	}
 }

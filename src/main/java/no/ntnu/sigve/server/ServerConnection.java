@@ -1,42 +1,38 @@
 package no.ntnu.sigve.server;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.Socket;
+import java.util.UUID;
+import no.ntnu.sigve.communication.Message;
 
 /**
  * A connection from a {@link Server} to one individual client. Handles the connection independent
  * of other connected clients.
  */
 public class ServerConnection extends Thread {
-	private Socket clientSocket;
-	private BufferedReader input;
-	private PrintWriter replyOutput;
-	private Server server;
+	private final Socket clientSocket;
+	private final ObjectInputStream input;
+	private final ObjectOutputStream replyOutput;
+  private final Server server;
 
 	/**
-	 * Creates a new threaded connection from a {@link Server} to a 
-	 * {@link com.example.client.Client Client}.
+	 * Creates a new threaded connection from a {@link Server} to a
+	 * {@link no.ntnu.sigve.client.Client}.
 	 *
-	 * @param protocol the protocol on which the connection runs.
+	 * @param protocol     the protocol on which the connection runs.
 	 * @param clientSocket the socket connection belonging to the client.
+	 * @param address      the UUID
 	 * @throws IOException if a connection could not be established.
 	 */
 	public ServerConnection(Server server, Socket clientSocket) throws IOException {
 		this.clientSocket = clientSocket;
 		this.server = server;
 
-		input = new BufferedReader(
-			new InputStreamReader(
-				clientSocket.getInputStream()
-			)
-		);
-
-		replyOutput = new PrintWriter(
-			clientSocket.getOutputStream(), true
-		);
+		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
+		input = new ObjectInputStream(clientSocket.getInputStream());
 	}
 
 	@Override
@@ -48,27 +44,38 @@ public class ServerConnection extends Thread {
 		closeConnection();
 	}
 
-	 /**
+	/**
 	 * Reads and processes the next message from the client. If a special
 	 * command (example "SEND") is detected, performs the associated action
 	 * (such as broadcasting a message to all clients). Otherwise, forwards
 	 * the message to the protocol for further processing.
 	 *
 	 * @return boolean indicating whether to continue running. Returns false
-	 * if the end of the stream is reached or an IOException occurs, signaling
-	 * the server connection to shut down.
+	 *         if the end of the stream is reached or an IOException occurs, signaling
+	 *         the server connection to shut down.
 	 */
 	private synchronized boolean readClientRequest() {
-		try {
-			String rawMessage = input.readLine();
-			this.server.registerIncomingMessage(rawMessage);
-			return true;
-		} catch (IOException e) {
-			System.err.println("Could not handle request: " + e.getMessage());
-			return false;
-		}
-	}
+		Message<? extends Serializable> message = null;
+		boolean retval = false;
 
+		try {
+			message = (Message<? extends Serializable>) input.readObject();
+		} catch (ClassCastException | ClassNotFoundException e) {
+			System.err.println("Discarding uncastable request from client. " + e.getMessage());
+			retval = true;
+		} catch (IOException e) {
+			System.err.println("Could not handle request. " + e.getMessage());
+		}
+
+		if (message != null) {
+      server.registerIncomingMessage(message);
+			message.assignSource(this.address);
+			protocol.receiveMessage(message);
+			retval = true;
+		}
+
+		return retval;
+	}
 
 
 	/**
@@ -76,8 +83,12 @@ public class ServerConnection extends Thread {
 	 *
 	 * @param message the message to send
 	 */
-	public void sendMessage(String message) {
-		replyOutput.println(message);
+	public void sendMessage(Message<?> message) {
+		try {
+			replyOutput.writeObject(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -107,11 +118,15 @@ public class ServerConnection extends Thread {
 		} catch (IOException e) {
 			System.err.println("Error closing input stream: " + e.getMessage());
 		}
-	
-		if (replyOutput != null) {
-			replyOutput.close();
+
+		try {
+			if (replyOutput != null) {
+				replyOutput.close();
+			}
+		} catch (IOException e) {
+			System.err.println("Error closing output stream: " + e.getMessage());
 		}
-	
+
 		try {
 			if (clientSocket != null && !clientSocket.isClosed()) {
 				clientSocket.close();
@@ -120,5 +135,5 @@ public class ServerConnection extends Thread {
 			System.err.println("Error closing socket: " + e.getMessage());
 		}
 	}
-	
+
 }

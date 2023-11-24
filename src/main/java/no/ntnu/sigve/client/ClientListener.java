@@ -1,14 +1,15 @@
 package no.ntnu.sigve.client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import no.ntnu.sigve.communication.Message;
 
 public class ClientListener extends Thread {
 
 	Client client;
-	BufferedReader messageStream;
+	ObjectInputStream messageStream;
 
-	public ClientListener(Client client, BufferedReader messageStream) {
+	public ClientListener(Client client, ObjectInputStream messageStream) {
 		this.client = client;
 		this.messageStream = messageStream;
 	}
@@ -20,12 +21,11 @@ public class ClientListener extends Thread {
 	@Override
 	public void run() {
 		try {
-		    String incomingMessage;
-			while ((incomingMessage = messageStream.readLine()) != null) {
+			Message<?> incomingMessage;
+			while ((incomingMessage = (Message<?>) messageStream.readObject()) != null) {
 				handleIncomingMessage(incomingMessage);
 			}
-			client.notifyDisconnection();
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			handleException(e);
 		}     finally {
 			closeInput();
@@ -38,7 +38,7 @@ public class ClientListener extends Thread {
 	 * @param message The incoming message to handle.
 	 */
 
-	private synchronized void handleIncomingMessage(String message) {
+	private synchronized void handleIncomingMessage(Message<?> message) {
 		this.client.registerIncomingMessage(message);
 	}
 
@@ -49,7 +49,6 @@ public class ClientListener extends Thread {
 	 */
 	private void handleException(Exception e) {
 		System.err.println("Error in ClientListener: " + e.getMessage());
-		client.notifyException(e);
 	}
 
 	private void closeInput() {
@@ -58,7 +57,7 @@ public class ClientListener extends Thread {
 				this.messageStream.close();
 			}
 		} catch (IOException e) {
-		System.err.println("Failed to close input stream: " + e.getMessage());
+			System.err.println("Failed to close input stream: " + e.getMessage());
 		}
 	}
 }
