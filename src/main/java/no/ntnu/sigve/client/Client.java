@@ -1,13 +1,21 @@
 package no.ntnu.sigve.client;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+
+import no.ntnu.sigve.communication.AckMessage;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.UuidMessage;
 
@@ -29,7 +37,13 @@ public class Client {
 
 	private ObjectOutputStream output;
 	private Socket socket;
-	private UUID sessionId;
+	protected UUID sessionId;
+
+	private DatagramSocket udpSocket;
+	private InetAddress udpAddress;
+	private int udpPort;
+	private Thread udpListenerThread;
+	private static final int ACK_TIMEOUT = 2000; 
 
 	/**
 	 * Creates a new client connection to a server.
@@ -42,6 +56,16 @@ public class Client {
 		this.port = port;
 		this.incomingMessages = new LinkedList<>();
 		this.observers = new ArrayList<>();
+	}
+
+
+
+	public Client(String address, int tcpPort, int udpPort) throws IOException {
+		this(address, tcpPort);
+		this.udpPort = udpPort;
+		this.udpAddress = InetAddress.getByName(address);
+		this.udpSocket = new DatagramSocket();
+		this.udpSocket = createDatagramSocket();
 	}
 
 	/**
@@ -159,5 +183,117 @@ public class Client {
 		for (MessageObserver observer : this.observers) {
 			observer.update(message);
 		}
+	}
+
+	/**
+	 * Starts a UDP listener that continuously listens for UDP messages.
+	 * When a message is received, it is registered and observers are notified.
+	 */
+	public void startUdpListener() {
+		udpListenerThread = new Thread(() -> {
+			try {
+				while (!udpSocket.isClosed()) {
+					Message<?> message = receiveUdpMessage();
+					System.out.println("UDP message received");
+					registerIncomingMessage(message);
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				System.out.println("UDP listener error: " + e.getMessage());
+			}
+		});
+		udpListenerThread.start();
+	}
+
+
+	/**
+	 * Sends a message over UDP to the server. The message is serialized to a byte array and then
+	 * sent in a UDP packet to the specified server address and port.
+	 *
+	 * @param message The message to be sent to the server.
+	 * @throws IOException if an I/O error occurs while creating the output stream or if the socket
+	 *                     is not connected to a remote address and port when sending the packet.
+	 */
+
+	public void sendUdpMessage(Message<?> message) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(baos);
+		oos.writeObject(message);
+		byte[] buffer = baos.toByteArray();
+
+		DatagramPacket packet = new DatagramPacket(buffer, buffer.length, this.udpAddress, this.udpPort);
+		this.udpSocket.send(packet);
+	}
+
+	/**
+	 * Sends a UDP message and waits for an acknowledgement (ACK).
+	 * If an ACK is not received within a specified timeout, the message is resent.
+	 *
+	 * @param message The message to send over UDP.
+	 * @throws IOException If there is an error sending the message.
+	 */
+	public void sendUdpMessageWithAck(Message<?> message) throws IOException {
+		sendUdpMessage(message);
+		try {
+			udpSocket.setSoTimeout(ACK_TIMEOUT);
+			while (true) {
+				try {
+					Message<?> ack = receiveUdpMessage();
+					if (ack instanceof AckMessage && ((AckMessage) ack).isAcknowledgementFor(message)) {
+						System.out.println("ACK received for message with ID: " + message.getSessionId());
+						break;
+					}
+				} catch (SocketTimeoutException e) {
+					System.out.println("ACK not received, resending message with ID: " + message.getSessionId());
+					sendUdpMessage(message);
+				} catch (ClassNotFoundException e) {
+					System.out.println("Class not found while receiving message: " + e.getMessage());
+				}
+			}
+		} finally {
+			udpSocket.setSoTimeout(0);
+		}
+	}
+
+
+
+	/**
+	 * Receives a UDP message from the socket.
+	 *
+	 * @return The message received from the UDP socket.
+	 * @throws IOException If there is an error receiving the message.
+	 * @throws ClassNotFoundException If the serialized object class is not found.
+	 */
+	public Message<?> receiveUdpMessage() throws IOException, ClassNotFoundException {
+		byte[] buffer = new byte[65535];
+		DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+		this.udpSocket.receive(packet);
+
+		ByteArrayInputStream bais = new ByteArrayInputStream(buffer, packet.getOffset(), packet.getLength());
+		ObjectInputStream ois = new ObjectInputStream(bais);
+		return (Message<?>) ois.readObject();
+	}
+		
+	/**
+	 * Closes the client connection, including both TCP and UDP sockets, and stops the listener thread.
+	 *
+	 * @throws IOException If an I/O error occurs when closing the connection.
+	 */
+	public void close() throws IOException {
+		if (socket != null && !socket.isClosed()) {
+			socket.close();
+		}
+		if (output != null) {
+			output.close();
+		}
+		if (udpSocket != null && !udpSocket.isClosed()) {
+			udpSocket.close();
+		}
+		if (udpListenerThread != null) {
+			udpListenerThread.interrupt();
+		}
+	}
+
+	protected DatagramSocket createDatagramSocket() throws IOException {
+		return new DatagramSocket();
 	}
 }
