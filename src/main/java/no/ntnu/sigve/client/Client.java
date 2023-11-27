@@ -23,7 +23,7 @@ import no.ntnu.sigve.communication.UuidMessage;
 public class Client {
 
 
-	private final LinkedList<Message<? extends Serializable>> incomingMessages;
+	private final LinkedList<Message<?>> incomingMessages;
 	private final ObjectOutputStream output;
 	private final Socket socket;
 	private final List<MessageObserver> observers;
@@ -119,7 +119,7 @@ public class Client {
 	 *
 	 * @param message the message to register.
 	 */
-	public void registerIncomingMessage(Message<? extends Serializable> message) {
+	public void registerIncomingMessage(Message<?> message) {
 		this.incomingMessages.add(message);
 		notifyObservers(message);
 	}
@@ -148,7 +148,7 @@ public class Client {
 	 *
 	 * @param message The message to be sent to the observers.
 	 */
-	private void notifyObservers(Message<? extends Serializable> message) {
+	private void notifyObservers(Message<?> message) {
 		for (MessageObserver observer : this.observers) {
 			observer.update(message);
 		}

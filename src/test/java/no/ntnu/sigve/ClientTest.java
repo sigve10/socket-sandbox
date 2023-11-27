@@ -37,7 +37,7 @@ public class ClientTest {
 		return client;
 	}
 
-	private Message<? extends Serializable> waitForMessage(Client client) {
+	private Message<?> waitForMessage(Client client) {
 		return await()
 				.atMost(5, TimeUnit.SECONDS)
 				.until(client::nextIncomingMessage, Objects::nonNull);

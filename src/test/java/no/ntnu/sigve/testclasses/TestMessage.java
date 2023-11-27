@@ -28,7 +28,7 @@ class TestMessage {
 
 		ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
 
-		Message<? extends Serializable> deserializedMessage = (Message<? extends Serializable>) ois.readObject();
+		Message<?> deserializedMessage = (Message<?>) ois.readObject();
 
 		assertTrue(deserializedMessage.getPayload() instanceof FunkyObject);
 		assertEquals(originalPayload, deserializedMessage.getPayload());

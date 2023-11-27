@@ -65,7 +65,7 @@ public class ServerConnection extends Thread {
 		boolean retval = false;
 
 		try {
-			message = (Message<? extends Serializable>) input.readObject();
+			message = (Message<?>) input.readObject();
 		} catch (ClassCastException | ClassNotFoundException e) {
 			System.err.println("Discarding uncastable request from client. " + e.getMessage());
 			retval = true;
