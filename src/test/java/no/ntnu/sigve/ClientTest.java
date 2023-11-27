@@ -29,9 +29,9 @@ public class ClientTest {
 	 * @return A client to run test on.
 	 */
 	public static Client createClient() {
-		Client client = null;
+		Client client = new Client("localhost", 8080);
 		try {
-			client = new Client("localhost", 8080);
+			client.connect();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -59,7 +59,6 @@ public class ClientTest {
 		System.out.println("This ran first");
 		client = createClient();
 		client1 = createClient();
-
 	}
 
 	/**
@@ -72,14 +71,10 @@ public class ClientTest {
 	}
 
 	@Test
-	void negativeConstructorTest1() {
-		assertThrows(IOException.class, () -> new Client("localhost", 0));
+	void negativeConnectionTest1() {
+		Client illegalClient = new Client("localhost", 0);
+		assertThrows(IOException.class, illegalClient::connect);
 
-	}
-
-	@Test
-	void positiveConstructorTest2() {
-		assertDoesNotThrow(() -> new Client(null, 8080));
 	}
 
 	@Test

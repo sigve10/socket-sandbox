@@ -3,7 +3,6 @@ package no.ntnu.sigve.client;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -21,25 +20,37 @@ import no.ntnu.sigve.communication.UuidMessage;
  * @see Client#nextIncomingMessage() nextIncomingMessage
  */
 public class Client {
+	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
 
-
+	private final String address;
+	private final int port;
 	private final LinkedList<Message<?>> incomingMessages;
-	private final ObjectOutputStream output;
-	private final Socket socket;
 	private final List<MessageObserver> observers;
-	private final UUID sessionId;
+
+	private ObjectOutputStream output;
+	private Socket socket;
+	private UUID sessionId;
 
 	/**
 	 * Creates a new client connection to a server.
 	 *
 	 * @param address the address of the server to connect to
 	 * @param port    the port of the server to connect to
-	 * @throws IOException if connecting to the server fails
 	 */
-	public Client(String address, int port) throws IOException {
+	public Client(String address, int port) {
+		this.address = address;
+		this.port = port;
 		this.incomingMessages = new LinkedList<>();
-		this.socket = new Socket(address, port);
 		this.observers = new ArrayList<>();
+	}
+
+	/**
+	 * Tries to connect to the server.
+	 *
+	 * @throws IOException If connecting to the server fails
+	 */
+	public void connect() throws IOException {
+		this.socket = new Socket(address, port);
 
 		ObjectInputStream socketResponseStream =
 				new ObjectInputStream(this.socket.getInputStream());
@@ -51,7 +62,7 @@ public class Client {
 			if (uuidMessage != null) {
 				uuid = uuidMessage.getPayload();
 			}
-		} catch (ClassNotFoundException cnfe) {
+		} catch (ClassNotFoundException | ClassCastException e) {
 			//Do nothing
 		}
 		if (uuid != null) {
@@ -65,22 +76,14 @@ public class Client {
 	}
 
 	/**
-	 * Closes the connection to the server.
-	 */
-	public void close() {
-		try {
-			socket.close();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-	}
-
-	/**
 	 * Gets the session ID.
 	 *
 	 * @return The session ID
 	 */
 	public UUID getSessionId() {
+		if (socket == null) {
+			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
+		}
 		return sessionId;
 	}
 
@@ -90,10 +93,13 @@ public class Client {
 	 * @param message to send to the server.
 	 */
 	public void sendOutgoingMessage(Message<?> message) {
+		if (socket == null) {
+			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
+		}
 		try {
 			this.output.writeObject(message);
 		} catch (IOException ioe) {
-			//TODO: Possibly do something lol
+			System.err.println("Could not send outgoing message. Here's the stacktrace:");
 			ioe.printStackTrace();
 		}
 	}
@@ -134,7 +140,8 @@ public class Client {
 	}
 
 	/**
-	 * Removes an observer from the client. The observer will no longer receive message notifications.
+	 * Removes an observer from the client.
+	 * The observer will no longer receive message notifications.
 	 *
 	 * @param observer The observer to remove.
 	 */
