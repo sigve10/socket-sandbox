@@ -47,6 +47,7 @@ public class ServerConnection extends Thread {
 		while (keepRunning) {
 			keepRunning = readClientRequest();
 		}
+		this.server.removeExistingConnection(this.clientUuid);
 		closeConnection();
 	}
 
@@ -57,10 +58,10 @@ public class ServerConnection extends Thread {
 	 * the message to the protocol for further processing.
 	 *
 	 * @return boolean indicating whether to continue running. Returns false
-	 * 		if the end of the stream is reached or an IOException occurs, signaling
-	 * 		the server connection to shut down.
+	 *     if the end of the stream is reached or an IOException occurs, signaling
+	 *     the server connection to shut down.
 	 */
-	private synchronized boolean readClientRequest() {
+	private boolean readClientRequest() {
 		Message<? extends Serializable> message = null;
 		boolean retval = false;
 

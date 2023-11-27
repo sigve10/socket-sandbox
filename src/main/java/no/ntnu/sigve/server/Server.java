@@ -70,10 +70,28 @@ public class Server {
 		ServerConnection connection = new ServerConnection(this, incomingConnection, sessionId);
 		connection.sendMessage(new UuidMessage(sessionId));
 
-		this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
-		this.clientConnections.put(sessionId, connection);
-		
+		synchronized (this) {
+			this.uuidToAddressMap.put(sessionId, incomingConnection.getInetAddress());
+			this.clientConnections.put(sessionId, connection);
+		}
+
 		connection.start();
+
+		this.protocol.onClientConnect(this, sessionId);
+	}
+
+	/**
+	 * Removes an existing connection from the map of connections. Notifies the protocol.
+	 *
+	 * @param sessionId the UUID of the disconnecting client.
+	 */
+	public void removeExistingConnection(UUID sessionId) {
+		this.protocol.onClientDisconnect(this, sessionId);
+
+		synchronized (this) {
+			this.uuidToAddressMap.remove(sessionId);
+			this.clientConnections.remove(sessionId);
+		}
 	}
 
 
@@ -103,6 +121,11 @@ public class Server {
 		}
 	}
 
+	/**
+	 * Notifies the protocol of a new message.
+	 *
+	 * @param message the message to arrive.
+	 */
 	public void registerIncomingMessage(Message<?> message) {
 		this.protocol.receiveMessage(this, message);
 	}

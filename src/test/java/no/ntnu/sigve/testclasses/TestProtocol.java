@@ -1,5 +1,7 @@
 package no.ntnu.sigve.testclasses;
 
+import java.util.UUID;
+
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.server.Protocol;
 import no.ntnu.sigve.server.Server;
@@ -24,5 +26,15 @@ public class TestProtocol implements Protocol {
 				//Do nothing
 			}
 		}
+	}
+
+	@Override
+	public void onClientConnect(Server server, UUID clientId) {
+		throw new UnsupportedOperationException("Unimplemented method 'onClientConnect'");
+	}
+
+	@Override
+	public void onClientDisconnect(Server server, UUID clientId) {
+		throw new UnsupportedOperationException("Unimplemented method 'onClientDisconnect'");
 	}
 }

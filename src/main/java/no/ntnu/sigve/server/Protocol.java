@@ -1,6 +1,7 @@
 package no.ntnu.sigve.server;
 
-import java.io.Serializable;
+import java.util.UUID;
+
 import no.ntnu.sigve.communication.Message;
 
 /**
@@ -9,10 +10,14 @@ import no.ntnu.sigve.communication.Message;
  */
 public interface Protocol {
 	/**
-	 * Accepts a message from a {@link ServerConnection} and 
+	 * Accepts a message from a {@link ServerConnection} and
 	 * interprets it to do server-side actions.
 	 *
 	 * @param message the raw message from the client.
 	 */
 	public void receiveMessage(Server server, Message<?> message);
+
+	public void onClientConnect(Server server, UUID clientId);
+
+	public void onClientDisconnect(Server server, UUID clientId);
 }
