@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ClientTest {
 	private static Server server = null;
 	private static Client client;
+	private static Client client1;
 
 	/**
 	 * Creates a client for test purposes.
@@ -57,6 +58,8 @@ public class ClientTest {
 		server.start();
 		System.out.println("This ran first");
 		client = createClient();
+		client1 = createClient();
+
 	}
 
 	/**
@@ -118,4 +121,12 @@ public class ClientTest {
 		server.route(new Message<>(client.getSessionId(), "Hello"));
 		assertEquals("Hello", waitForMessage(client).getPayload());
 	}
+	@Test
+	void testSimultaneousSending() {
+		client.sendOutgoingMessage(new Message<Serializable>(client.getSessionId(), "1"));
+		client1.sendOutgoingMessage(new Message<Serializable>(client1.getSessionId(), "1"));
+		assertEquals("1", waitForMessage(client).getPayload());
+		assertEquals("1", waitForMessage(client1).getPayload());
+	}
+
 }

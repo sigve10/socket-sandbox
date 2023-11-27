@@ -30,11 +30,13 @@ public class TestProtocol implements Protocol {
 
 	@Override
 	public void onClientConnect(Server server, UUID clientId) {
-		throw new UnsupportedOperationException("Unimplemented method 'onClientConnect'");
+		System.out.println("Client connected");
+		//throw new UnsupportedOperationException("Unimplemented method 'onClientConnect'");
 	}
 
 	@Override
 	public void onClientDisconnect(Server server, UUID clientId) {
-		throw new UnsupportedOperationException("Unimplemented method 'onClientDisconnect'");
+		System.out.println("Client disconnected");
+		//throw new UnsupportedOperationException("Unimplemented method 'onClientDisconnect'");
 	}
 }

@@ -397,3 +397,4 @@ FodyWeavers.xsd
 
 .idea/
 demo.iml
+.vscode/settings.json
