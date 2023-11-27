@@ -7,6 +7,8 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
+
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.UuidMessage;
 
@@ -105,6 +107,18 @@ public class Server {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
+	}
+
+	/**
+	 * Broadcasts a given message to all currently connected clients according to a predicate.
+	 *
+	 * @param message the message to be broadcast
+	 * @param predicate a predicate to filter the session IDs
+	 */
+	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
+		clientConnections.keySet().stream()
+			.filter(predicate)
+			.forEach(key -> clientConnections.get(key).sendMessage(message));
 	}
 
 	/**
