@@ -232,10 +232,12 @@ public class Client {
 	 * @throws IOException If there is an error sending the message.
 	 */
 	public void sendUdpMessageWithAck(Message<?> message) throws IOException {
+		int maxRetries = 5;
+		int attempts = 0;
 		sendUdpMessage(message);
 		try {
 			udpSocket.setSoTimeout(ACK_TIMEOUT);
-			while (true) {
+			while (attempts < maxRetries) {
 				try {
 					Message<?> ack = receiveUdpMessage();
 					if (ack instanceof AckMessage && ((AckMessage) ack).isAcknowledgementFor(message)) {
@@ -243,11 +245,15 @@ public class Client {
 						break;
 					}
 				} catch (SocketTimeoutException e) {
-					System.out.println("ACK not received, resending message with ID: " + message.getSessionId());
+					attempts++;
+					System.out.println("ACK not received, retry " + attempts + " of " + maxRetries + ", resending message with ID: " + message.getSessionId());
 					sendUdpMessage(message);
 				} catch (ClassNotFoundException e) {
 					System.out.println("Class not found while receiving message: " + e.getMessage());
 				}
+			}
+			if (attempts >= maxRetries) {
+				System.out.println("Max retries reached, giving up on sending message with ID: " + message.getSessionId());
 			}
 		} finally {
 			udpSocket.setSoTimeout(0);
