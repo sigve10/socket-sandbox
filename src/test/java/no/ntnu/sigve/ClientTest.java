@@ -86,8 +86,8 @@ public class ClientTest {
 
 	@Test
 	void message() {
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "test1"));
-		assertEquals("test1", waitForMessage(client).getPayload());
+		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
+		assertEquals("1", waitForMessage(client).getPayload());
 	}
 
 	@Test
@@ -98,10 +98,10 @@ public class ClientTest {
 
 	@Test
 	void testThatMessagesReturnsInOrder() {
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "test1"));
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "test2"));
-		assertEquals("test1", waitForMessage(client).getPayload());
-		assertEquals("test2", waitForMessage(client).getPayload());
+		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
+		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "2"));
+		assertEquals("1", waitForMessage(client).getPayload());
+		assertEquals("2", waitForMessage(client).getPayload());
 	}
 
 	@Test
