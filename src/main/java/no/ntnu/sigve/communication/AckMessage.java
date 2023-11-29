@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.UUID;
 
 /**
+ * @deprecated Use {@link
  * Represents an acknowledgment message sent by the server to confirm the receipt
  * and processing of a specific message from a client.
  * This class extends the generic Message class and is used to acknowledge messages
@@ -11,6 +12,7 @@ import java.util.UUID;
  *
  * @param <T> The type of payload associated with the acknowledgment message.
  */
+@Deprecated
 public class AckMessage extends Message<Serializable> {
 
     /**

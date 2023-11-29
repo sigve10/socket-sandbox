@@ -91,12 +91,15 @@ public class ServerConnection extends Thread {
 	 */
 	public void sendMessage(Message<?> message) {
 		try {
+			System.out.println("Sending message to client UUID: " + this.clientUuid + ", Message: " + message);
 			replyOutput.writeObject(message);
+			System.out.println("Message sent successfully to client UUID: " + this.clientUuid);
 		} catch (IOException e) {
+			System.err.println("Failed to send message to client UUID: " + this.clientUuid + ", Error: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
-
+	
 	/**
 	 * Attempts to close the connection.
 	 */

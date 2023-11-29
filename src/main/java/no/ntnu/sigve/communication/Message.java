@@ -18,6 +18,7 @@ public class Message<T extends Serializable> implements Serializable {
 	private UUID destination;
 	private T payload;
 	private UUID sessionId;
+	private boolean isUdp;
 
 	/**
 	 * Creates a new message for the given destination.
@@ -93,10 +94,19 @@ public class Message<T extends Serializable> implements Serializable {
 	}
 
 	public UUID getSessionId() {
-        return sessionId;
-    }
+		return sessionId;
+	}
 
-    public void setSessionId(UUID sessionId) {
-        this.sessionId = sessionId;
-    }
+	public void setSessionId(UUID sessionId) {
+		this.sessionId = sessionId;
+	}
+
+	public boolean isUdp() {
+		return isUdp;
+	}
+
+	public void setUdp(boolean isUdp) {
+		this.isUdp = isUdp;
+	}
+
 }
