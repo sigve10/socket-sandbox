@@ -1,5 +1,7 @@
 package no.ntnu.sigve.testclasses;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import no.ntnu.sigve.client.Client;
@@ -7,11 +9,15 @@ import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 
 public class TestClientProtocol implements Protocol<Client> {
-	public Message<?> message;
+	private final List<Message<?>> messages;
+
+	public TestClientProtocol() {
+		messages = new ArrayList<>();
+	}
 
 	@Override
 	public void receiveMessage(Client caller, Message<?> message) {
-		this.message = message;
+		this.messages.add(message);
 	}
 
 	@Override
@@ -25,6 +31,6 @@ public class TestClientProtocol implements Protocol<Client> {
 	}
 
 	public Message<?> getMessage() {
-		return message;
+		return messages.isEmpty() ? null : messages.remove(0);
 	}
 }

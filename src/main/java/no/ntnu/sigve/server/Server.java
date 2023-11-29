@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
-
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.communication.ProtocolUser;
@@ -21,21 +20,23 @@ import no.ntnu.sigve.communication.UuidMessage;
  *
  * @author Sigve Bjørkedal
  */
-public class Server extends ProtocolUser {
+public class Server implements ProtocolUser {
 	private final int port;
 	private final ServerSocket genericServer;
 	private final Map<UUID, InetAddress> uuidToAddressMap;
 	private final Map<UUID, ServerConnection> clientConnections;
 
+	private final Protocol<Server> protocol;
+
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
 	 *
-	 * @param port the port on which the server will listen for incoming connections.
+	 * @param port     the port on which the server will listen for incoming connections.
 	 * @param protocol the protocol by which the server will interpret messages.
 	 * @throws IOException if creating the server fails.
 	 */
 	public Server(int port, Protocol<Server> protocol) throws IOException {
-		super(protocol);
+		this.protocol = protocol;
 		this.genericServer = new ServerSocket(port);
 		this.uuidToAddressMap = new HashMap<>();
 		this.clientConnections = new HashMap<>();
@@ -80,7 +81,7 @@ public class Server extends ProtocolUser {
 
 		connection.start();
 
-		this.onClientConnect(sessionId);
+		this.protocol.onClientConnect(this, sessionId);
 	}
 
 	/**
@@ -89,7 +90,7 @@ public class Server extends ProtocolUser {
 	 * @param sessionId the UUID of the disconnecting client.
 	 */
 	public void removeExistingConnection(UUID sessionId) {
-		this.onClientDisconnect(sessionId);
+		this.protocol.onClientDisconnect(this, sessionId);
 
 		synchronized (this) {
 			this.uuidToAddressMap.remove(sessionId);
@@ -113,13 +114,13 @@ public class Server extends ProtocolUser {
 	/**
 	 * Broadcasts a given message to all currently connected clients according to a predicate.
 	 *
-	 * @param message the message to be broadcast
+	 * @param message   the message to be broadcast
 	 * @param predicate a predicate to filter the session IDs
 	 */
 	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
 		clientConnections.keySet().stream()
-			.filter(predicate)
-			.forEach(key -> clientConnections.get(key).sendMessage(message));
+				.filter(predicate)
+				.forEach(key -> clientConnections.get(key).sendMessage(message));
 	}
 
 	/**
@@ -142,6 +143,6 @@ public class Server extends ProtocolUser {
 	 * @param message the message to arrive.
 	 */
 	public void registerIncomingMessage(Message<?> message) {
-		this.onMessageReceived(message);
+		this.protocol.receiveMessage(this, message);
 	}
 }

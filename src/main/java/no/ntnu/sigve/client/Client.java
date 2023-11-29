@@ -16,13 +16,13 @@ import no.ntnu.sigve.communication.UuidMessage;
  *
  * @author Sigve Bjørkedal
  * @see Client#sendOutgoingMessage(Message) sendOutgoingMessage
- * @see Client#nextIncomingMessage() nextIncomingMessage
  */
-public class Client extends ProtocolUser {
+public class Client implements ProtocolUser {
 	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
 
 	private final String address;
 	private final int port;
+	private final Protocol<Client> protocol;
 
 	private ObjectOutputStream output;
 	private Socket socket;
@@ -31,13 +31,14 @@ public class Client extends ProtocolUser {
 	/**
 	 * Creates a new client connection to a server.
 	 *
-	 * @param address the address of the server to connect to
-	 * @param port    the port of the server to connect to
+	 * @param address  the address of the server to connect to
+	 * @param port     the port of the server to connect to
+	 * @param protocol the protocol by which the client will interpret messages.
 	 */
 	public Client(String address, int port, Protocol<Client> protocol) {
-		super(protocol);
 		this.address = address;
 		this.port = port;
+		this.protocol = protocol;
 	}
 
 	/**
@@ -107,7 +108,7 @@ public class Client extends ProtocolUser {
 	 * @param message the received message object
 	 */
 	public void registerIncomingMessage(Message<?> message) {
-		this.onMessageReceived(message);
+		this.protocol.receiveMessage(this, message);
 	}
 
 	/**
@@ -115,13 +116,13 @@ public class Client extends ProtocolUser {
 	 * session id.
 	 */
 	public void onClientConnected() {
-		this.onClientConnect(this.sessionId);
+		this.protocol.onClientConnect(this, this.sessionId);
 	}
 
 	/**
 	 * Notifies the connected protocol that the client has disconnected from the server.
 	 */
 	public void onClientDisconnected() {
-		this.onClientDisconnect(this.sessionId);
+		this.protocol.onClientDisconnect(this, this.sessionId);
 	}
 }
