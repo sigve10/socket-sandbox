@@ -7,7 +7,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import no.ntnu.sigve.client.Client;
 import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.server.Server;
+import no.ntnu.sigve.testclasses.TestClientProtocol;
 import no.ntnu.sigve.testclasses.TestProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +24,7 @@ public class ClientTest {
 	private static Server server = null;
 	private static Client client;
 	private static Client client1;
+	private static TestClientProtocol protocol;
 
 	/**
 	 * Creates a client for test purposes.
@@ -29,7 +32,8 @@ public class ClientTest {
 	 * @return A client to run test on.
 	 */
 	public static Client createClient() {
-		Client client = new Client("localhost", 8080);
+		protocol = new TestClientProtocol();
+		Client client = new Client("localhost", 8080, protocol);
 		try {
 			client.connect();
 		} catch (IOException e) {
@@ -41,7 +45,7 @@ public class ClientTest {
 	private Message<?> waitForMessage(Client client) {
 		return await()
 				.atMost(5, TimeUnit.SECONDS)
-				.until(client::nextIncomingMessage, Objects::nonNull);
+				.until(protocol::getMessage, Objects::nonNull);
 	}
 
 	/**
@@ -72,26 +76,20 @@ public class ClientTest {
 
 	@Test
 	void negativeConnectionTest1() {
-		Client illegalClient = new Client("localhost", 0);
+		Client illegalClient = new Client("localhost", 0, protocol);
 		assertThrows(IOException.class, illegalClient::connect);
 
 	}
 
 	@Test
 	void constructorTest() {
-		assertDoesNotThrow(() -> new Client("localhost", 8080));
+		assertDoesNotThrow(() -> new Client("localhost", 8080, protocol));
 	}
 
 	@Test
 	void message() {
 		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
 		assertEquals("1", waitForMessage(client).getPayload());
-	}
-
-	@Test
-	void testThatNoMessageReturnsNull() {
-		Message<?> message = client.nextIncomingMessage();
-		assertNull(message);
 	}
 
 	@Test
@@ -114,6 +112,7 @@ public class ClientTest {
 	@Test
 	void testRoute() {
 		server.route(new Message<>(client.getSessionId(), "Hello"));
+		client.registerIncomingMessage(new Message<>(client.getSessionId(), "Hello"));
 		assertEquals("Hello", waitForMessage(client).getPayload());
 	}
 	@Test

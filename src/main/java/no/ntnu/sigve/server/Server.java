@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.communication.Protocol;
+import no.ntnu.sigve.communication.ProtocolUser;
 import no.ntnu.sigve.communication.UuidMessage;
 
 /**
@@ -19,12 +21,11 @@ import no.ntnu.sigve.communication.UuidMessage;
  *
  * @author Sigve Bjørkedal
  */
-public class Server {
+public class Server extends ProtocolUser {
 	private final int port;
 	private final ServerSocket genericServer;
 	private final Map<UUID, InetAddress> uuidToAddressMap;
 	private final Map<UUID, ServerConnection> clientConnections;
-	private final Protocol protocol;
 
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
@@ -33,9 +34,9 @@ public class Server {
 	 * @param protocol the protocol by which the server will interpret messages.
 	 * @throws IOException if creating the server fails.
 	 */
-	public Server(int port, Protocol protocol) throws IOException {
+	public Server(int port, Protocol<Server> protocol) throws IOException {
+		super(protocol);
 		this.genericServer = new ServerSocket(port);
-		this.protocol = protocol;
 		this.uuidToAddressMap = new HashMap<>();
 		this.clientConnections = new HashMap<>();
 		this.port = port;
@@ -79,7 +80,7 @@ public class Server {
 
 		connection.start();
 
-		this.protocol.onClientConnect(this, sessionId);
+		this.onClientConnect(sessionId);
 	}
 
 	/**
@@ -88,7 +89,7 @@ public class Server {
 	 * @param sessionId the UUID of the disconnecting client.
 	 */
 	public void removeExistingConnection(UUID sessionId) {
-		this.protocol.onClientDisconnect(this, sessionId);
+		this.onClientDisconnect(sessionId);
 
 		synchronized (this) {
 			this.uuidToAddressMap.remove(sessionId);
@@ -141,6 +142,6 @@ public class Server {
 	 * @param message the message to arrive.
 	 */
 	public void registerIncomingMessage(Message<?> message) {
-		this.protocol.receiveMessage(this, message);
+		this.onMessageReceived(message);
 	}
 }

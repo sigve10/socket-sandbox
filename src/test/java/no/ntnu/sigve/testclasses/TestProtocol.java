@@ -3,13 +3,14 @@ package no.ntnu.sigve.testclasses;
 import java.util.UUID;
 
 import no.ntnu.sigve.communication.Message;
-import no.ntnu.sigve.server.Protocol;
+import no.ntnu.sigve.communication.Protocol;
+import no.ntnu.sigve.communication.ProtocolUser;
 import no.ntnu.sigve.server.Server;
 
 /**
  * A class for testing the protocol interface.
  */
-public class TestProtocol implements Protocol {
+public class TestProtocol implements Protocol<Server> {
 	/**
 	 * Class constructor.
 	 *
@@ -29,14 +30,10 @@ public class TestProtocol implements Protocol {
 	}
 
 	@Override
-	public void onClientConnect(Server server, UUID clientId) {
-		System.out.println("Client connected");
-		//throw new UnsupportedOperationException("Unimplemented method 'onClientConnect'");
+	public void onClientConnect(Server caller, UUID clientId) {
 	}
 
 	@Override
-	public void onClientDisconnect(Server server, UUID clientId) {
-		System.out.println("Client disconnected");
-		//throw new UnsupportedOperationException("Unimplemented method 'onClientDisconnect'");
+	public void onClientDisconnect(Server caller, UUID clientId) {
 	}
 }
