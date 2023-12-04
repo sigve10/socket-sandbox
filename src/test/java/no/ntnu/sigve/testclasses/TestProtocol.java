@@ -1,10 +1,8 @@
 package no.ntnu.sigve.testclasses;
 
 import java.util.UUID;
-
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
-import no.ntnu.sigve.communication.ProtocolUser;
 import no.ntnu.sigve.server.Server;
 
 /**

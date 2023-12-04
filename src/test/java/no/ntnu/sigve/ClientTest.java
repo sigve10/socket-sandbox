@@ -1,5 +1,7 @@
 package no.ntnu.sigve;
 
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -13,8 +15,7 @@ import no.ntnu.sigve.testclasses.TestProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
+
 
 /**
  * Tests.
@@ -116,6 +117,7 @@ class ClientTest {
 		server.route(new Message<>(client.getSessionId(), "Hello"));
 		assertEquals("Hello", waitForMessage(protocol).getPayload());
 	}
+
 	@Test
 	void testSimultaneousSending() {
 		client.sendOutgoingMessage(new Message<Serializable>(client.getSessionId(), "1"));
