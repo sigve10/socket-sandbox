@@ -8,8 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
-
 import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.communication.Protocol;
+import no.ntnu.sigve.communication.ProtocolUser;
 import no.ntnu.sigve.communication.UuidMessage;
 
 /**
@@ -19,23 +20,24 @@ import no.ntnu.sigve.communication.UuidMessage;
  *
  * @author Sigve Bjørkedal
  */
-public class Server {
+public class Server implements ProtocolUser {
 	private final int port;
 	private final ServerSocket genericServer;
 	private final Map<UUID, InetAddress> uuidToAddressMap;
 	private final Map<UUID, ServerConnection> clientConnections;
-	private final Protocol protocol;
+
+	private final Protocol<Server> protocol;
 
 	/**
 	 * Creates a new server on the given port, with the given protocol to interpret messages.
 	 *
-	 * @param port the port on which the server will listen for incoming connections.
+	 * @param port     the port on which the server will listen for incoming connections.
 	 * @param protocol the protocol by which the server will interpret messages.
 	 * @throws IOException if creating the server fails.
 	 */
-	public Server(int port, Protocol protocol) throws IOException {
-		this.genericServer = new ServerSocket(port);
+	public Server(int port, Protocol<Server> protocol) throws IOException {
 		this.protocol = protocol;
+		this.genericServer = new ServerSocket(port);
 		this.uuidToAddressMap = new HashMap<>();
 		this.clientConnections = new HashMap<>();
 		this.port = port;
@@ -112,13 +114,13 @@ public class Server {
 	/**
 	 * Broadcasts a given message to all currently connected clients according to a predicate.
 	 *
-	 * @param message the message to be broadcast
+	 * @param message   the message to be broadcast
 	 * @param predicate a predicate to filter the session IDs
 	 */
 	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
 		clientConnections.keySet().stream()
-			.filter(predicate)
-			.forEach(key -> clientConnections.get(key).sendMessage(message));
+				.filter(predicate)
+				.forEach(key -> clientConnections.get(key).sendMessage(message));
 	}
 
 	/**

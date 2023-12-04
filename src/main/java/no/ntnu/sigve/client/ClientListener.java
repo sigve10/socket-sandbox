@@ -27,8 +27,9 @@ public class ClientListener extends Thread {
 			}
 		} catch (IOException | ClassNotFoundException e) {
 			handleException(e);
-		}     finally {
+		} finally {
 			closeInput();
+			this.client.onClientDisconnected();
 		}
 	}
 
