@@ -1,5 +1,15 @@
 package no.ntnu.sigve.communication;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.deser.std.UUIDDeserializer;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.fasterxml.jackson.databind.ser.std.UUIDSerializer;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -13,10 +23,35 @@ import java.util.UUID;
  * <li>{@link Message#payload Payload} is the content of the message. A string containing the
  * information to be sent.</li></ul>
  */
+@JsonSerialize(using = Message.MessageSerializer.class)
 public class Message<T extends Serializable> implements Serializable {
+	@JsonSerialize(using = UUIDSerializer.class)
+	@JsonDeserialize(using = UUIDDeserializer.class)
 	private UUID source;
+
+	@JsonSerialize(using = UUIDSerializer.class)
+	@JsonDeserialize(using = UUIDDeserializer.class)
 	private UUID destination;
+
 	private T payload;
+
+	/**
+	 * Creates a new message for the given destination.
+	 *
+	 * @param source the address of the client from which the message was sent
+	 * @param destination the destination of the message
+	 * @param payload the body of the message
+	 */
+	@JsonCreator
+	public Message(
+			@JsonProperty("source") UUID source,
+			@JsonProperty("destionation") UUID destination,
+			@JsonProperty("payload") T payload) {
+		System.out.println("owo");
+		this.source = source;
+		this.destination = destination;
+		this.payload = payload;
+	}
 
 	/**
 	 * Creates a new message for the given destination.
@@ -89,5 +124,25 @@ public class Message<T extends Serializable> implements Serializable {
 	 */
 	public final T getPayload() {
 		return this.payload;
+	}
+
+	public static class MessageSerializer extends StdSerializer<Message<?>> {
+
+		public MessageSerializer() {
+			this(null);
+		}
+
+		public MessageSerializer(Class<Message<?>> t) {
+			super(t);
+		}
+
+		@Override
+		public void serialize(Message<?> message, JsonGenerator gen, SerializerProvider provider) throws IOException {
+			gen.writeStartObject();
+			gen.writeStringField("source", message.source == null ? null : message.source.toString());
+			gen.writeStringField("destination", message.destination == null ? null : message.destination.toString());
+			gen.writeObjectField("destination", message.getPayload());
+			gen.writeEndObject();
+		}
 	}
 }

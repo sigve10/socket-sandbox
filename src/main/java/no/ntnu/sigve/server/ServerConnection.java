@@ -1,9 +1,13 @@
 package no.ntnu.sigve.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.SequenceWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.InputStream;
 import java.net.Socket;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
@@ -14,10 +18,12 @@ import no.ntnu.sigve.communication.Message;
  */
 public class ServerConnection extends Thread {
 	private final Socket clientSocket;
-	private final ObjectInputStream input;
-	private final ObjectOutputStream replyOutput;
+	private final InputStream input;
+	private final SequenceWriter replyOutput;
 	private final Server server;
 	private final UUID clientUuid;
+	private final ObjectMapper json;
+	private final ObjectReader jsonReader;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a
@@ -37,8 +43,10 @@ public class ServerConnection extends Thread {
 		this.server = server;
 		this.clientUuid = clientUuid;
 
-		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
-		input = new ObjectInputStream(clientSocket.getInputStream());
+		this.json = new ObjectMapper();
+		this.jsonReader = json.readerFor(json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+		this.replyOutput = json.writer().writeValues(clientSocket.getOutputStream());
+		this.input = clientSocket.getInputStream();
 	}
 
 	@Override
@@ -58,25 +66,28 @@ public class ServerConnection extends Thread {
 	 * the message to the protocol for further processing.
 	 *
 	 * @return boolean indicating whether to continue running. Returns false
-	 *     if the end of the stream is reached or an IOException occurs, signaling
-	 *     the server connection to shut down.
+	 * 		if the end of the stream is reached or an IOException occurs, signaling
+	 * 		the server connection to shut down.
 	 */
 	private boolean readClientRequest() {
-		Message<? extends Serializable> message = null;
+		MappingIterator<Message<?>> messages = null;
 		boolean retval = false;
 
 		try {
-			message = (Message<?>) input.readObject();
-		} catch (ClassCastException | ClassNotFoundException e) {
-			System.err.println("Discarding uncastable request from client. " + e.getMessage());
+			messages = jsonReader.readValues(input);
+			//message = json.readValue((String) input.readObject(), new TypeReference<>(){});
+		} catch (ClassCastException e) {
+			System.err.println("Discarding un-castable request from client. " + e.getMessage());
 			retval = true;
 		} catch (IOException e) {
 			System.err.println("Could not handle request. " + e.getMessage());
 		}
 
-		if (message != null) {
-			message.assignSource(clientUuid);
-			server.registerIncomingMessage(message);
+		if (messages != null) {
+			messages.forEachRemaining(message -> {
+				message.assignSource(clientUuid);
+				server.registerIncomingMessage(message);
+			});
 			retval = true;
 		}
 
@@ -91,7 +102,13 @@ public class ServerConnection extends Thread {
 	 */
 	public void sendMessage(Message<?> message) {
 		try {
-			replyOutput.writeObject(message);
+			replyOutput.write(message, json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+		} catch (JsonProcessingException jpe) {
+			System.err.printf(
+					"Could not serialize message%nMessage type: %s%nPayload type: %s%nMessage: %s%n",
+					message.getClass(), message.getPayload().getClass(), message
+			);
+			jpe.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

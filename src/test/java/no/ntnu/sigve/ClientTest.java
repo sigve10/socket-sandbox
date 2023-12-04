@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import no.ntnu.sigve.client.Client;
 import no.ntnu.sigve.communication.Message;
@@ -91,7 +92,9 @@ class ClientTest {
 	@Test
 	void message() {
 		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
-		assertEquals("1", waitForMessage(protocol).getPayload());
+		Message<?> message = waitForMessage(protocol);
+		System.out.printf("%s | %s | %s%n", message.getSource(), message.getDestination(), message.getPayload());
+		assertEquals("1", message.getPayload());
 	}
 
 	@Test
@@ -106,7 +109,7 @@ class ClientTest {
 	void testBroadcast() {
 		TestClientProtocol clientProtocol = new TestClientProtocol();
 		createClient(clientProtocol);
-		Message<String> message = new Message<>(null);
+		Message<String> message = new Message<>((UUID) null);
 		message.setPayload("Hello");
 		server.broadcast(message);
 		assertEquals("Hello", waitForMessage(clientProtocol).getPayload());

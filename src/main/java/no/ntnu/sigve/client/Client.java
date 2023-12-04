@@ -1,8 +1,14 @@
 package no.ntnu.sigve.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SequenceWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
@@ -23,8 +29,9 @@ public class Client implements ProtocolUser {
 	private final String address;
 	private final int port;
 	private final Protocol<Client> protocol;
+	private final ObjectMapper json;
 
-	private ObjectOutputStream output;
+	private SequenceWriter output;
 	private Socket socket;
 	private UUID sessionId;
 
@@ -39,6 +46,7 @@ public class Client implements ProtocolUser {
 		this.address = address;
 		this.port = port;
 		this.protocol = protocol;
+		this.json = new ObjectMapper();
 	}
 
 	/**
@@ -49,27 +57,8 @@ public class Client implements ProtocolUser {
 	public void connect() throws IOException {
 		this.socket = new Socket(address, port);
 
-		ObjectInputStream socketResponseStream =
-				new ObjectInputStream(this.socket.getInputStream());
-		this.output = new ObjectOutputStream(this.socket.getOutputStream());
-
-		UUID uuid = null;
-		try {
-			UuidMessage uuidMessage = (UuidMessage) socketResponseStream.readObject();
-			if (uuidMessage != null) {
-				uuid = uuidMessage.getPayload();
-			}
-		} catch (ClassNotFoundException | ClassCastException e) {
-			//Do nothing
-		}
-		if (uuid != null) {
-			this.sessionId = uuid;
-			System.out.println("Received session ID: " + this.sessionId);
-		} else {
-			throw new IllegalStateException("Session ID was not received properly.");
-		}
-
-		new ClientListener(this, socketResponseStream).start();
+		new ClientListener(this, socket.getInputStream()).start();
+		this.output = json.writer().writeValues(this.socket.getOutputStream());
 		onClientConnected();
 	}
 
@@ -95,7 +84,13 @@ public class Client implements ProtocolUser {
 			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
 		}
 		try {
-			this.output.writeObject(message);
+			output.write(message, json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+		} catch (JsonProcessingException jpe) {
+			System.err.printf(
+					"Could not serialize message%nMessage type: %s%nPayload type: %s%nMessage: %s%n",
+					message.getClass(), message.getPayload().getClass(), message
+			);
+			jpe.printStackTrace();
 		} catch (IOException ioe) {
 			System.err.println("Could not send outgoing message. Here's the stacktrace:");
 			ioe.printStackTrace();
@@ -108,6 +103,10 @@ public class Client implements ProtocolUser {
 	 * @param message the received message object
 	 */
 	public void registerIncomingMessage(Message<?> message) {
+		if (message instanceof UuidMessage uuidMessage) {
+			this.sessionId = uuidMessage.getPayload();
+			System.out.println("Received session ID: " + sessionId);
+		}
 		this.protocol.receiveMessage(this, message);
 	}
 

@@ -1,17 +1,25 @@
 package no.ntnu.sigve.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.InputStream;
 import no.ntnu.sigve.communication.Message;
 
 public class ClientListener extends Thread {
 
-	Client client;
-	ObjectInputStream messageStream;
+	private final Client client;
+	private final InputStream messageStream;
+	private final ObjectMapper json;
+	private final ObjectReader jsonReader;
 
-	public ClientListener(Client client, ObjectInputStream messageStream) {
+	public ClientListener(Client client, InputStream messageStream) {
 		this.client = client;
 		this.messageStream = messageStream;
+		this.json = new ObjectMapper();
+		this.jsonReader = json.readerFor(json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
 	}
 
 	/**
@@ -21,12 +29,12 @@ public class ClientListener extends Thread {
 	@Override
 	public void run() {
 		try {
-			Message<?> incomingMessage;
-			while ((incomingMessage = (Message<?>) messageStream.readObject()) != null) {
-				handleIncomingMessage(incomingMessage);
+			MappingIterator<Message<?>> messages;
+			while ((messages = jsonReader.readValues(messageStream)) != null) {
+				messages.forEachRemaining(this::handleIncomingMessage);
 			}
-		} catch (IOException | ClassNotFoundException e) {
-			handleException(e);
+		} catch (IOException ioe) {
+			handleException(ioe);
 		} finally {
 			closeInput();
 			this.client.onClientDisconnected();
@@ -49,7 +57,8 @@ public class ClientListener extends Thread {
 	 * @param e The exception to handle.
 	 */
 	private void handleException(Exception e) {
-		System.err.println("Error in ClientListener: " + e.getMessage());
+		System.err.println("Error in ClientListener: ");
+		e.printStackTrace();
 	}
 
 	private void closeInput() {
