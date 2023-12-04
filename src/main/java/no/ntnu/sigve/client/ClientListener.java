@@ -4,11 +4,21 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import no.ntnu.sigve.communication.Message;
 
+/**
+ * A separate thread from a client which is responsible for actively listening for new messages from
+ * the server.
+ */
 public class ClientListener extends Thread {
 
 	Client client;
 	ObjectInputStream messageStream;
 
+	/**
+	 * Creates a new client listener.
+	 *
+	 * @param client the client this listener belongs to
+	 * @param messageStream the socket input stream this listener should listen to
+	 */
 	public ClientListener(Client client, ObjectInputStream messageStream) {
 		this.client = client;
 		this.messageStream = messageStream;
