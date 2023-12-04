@@ -59,7 +59,7 @@ public class ClientListener extends Thread {
 	 * @param e The exception to handle.
 	 */
 	private void handleException(Exception e) {
-		System.err.println("Error in ClientListener: " + e.getMessage());
+		e.printStackTrace();
 	}
 
 	private void closeInput() {
@@ -68,7 +68,7 @@ public class ClientListener extends Thread {
 				this.messageStream.close();
 			}
 		} catch (IOException e) {
-			System.err.println("Failed to close input stream: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }

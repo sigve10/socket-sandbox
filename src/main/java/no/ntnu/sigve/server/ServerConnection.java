@@ -68,10 +68,10 @@ public class ServerConnection extends Thread {
 		try {
 			message = (Message<?>) input.readObject();
 		} catch (ClassCastException | ClassNotFoundException e) {
-			System.err.println("Discarding uncastable request from client. " + e.getMessage());
+			e.printStackTrace();
 			retval = true;
 		} catch (IOException e) {
-			System.err.println("Could not handle request. " + e.getMessage());
+			e.printStackTrace();
 		}
 
 		if (message != null) {
@@ -105,7 +105,7 @@ public class ServerConnection extends Thread {
 			this.clientSocket.close();
 			input.close();
 		} catch (IOException e) {
-			System.err.println("Could not close socket. " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -122,7 +122,7 @@ public class ServerConnection extends Thread {
 				input.close();
 			}
 		} catch (IOException e) {
-			System.err.println("Error closing input stream: " + e.getMessage());
+			e.printStackTrace();
 		}
 
 		try {
@@ -130,7 +130,7 @@ public class ServerConnection extends Thread {
 				replyOutput.close();
 			}
 		} catch (IOException e) {
-			System.err.println("Error closing output stream: " + e.getMessage());
+			e.printStackTrace();
 		}
 
 		try {
@@ -138,7 +138,7 @@ public class ServerConnection extends Thread {
 				clientSocket.close();
 			}
 		} catch (IOException e) {
-			System.err.println("Error closing socket: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
