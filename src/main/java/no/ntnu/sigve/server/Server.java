@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.communication.ProtocolUser;
+import no.ntnu.sigve.communication.UnknownMessage;
 import no.ntnu.sigve.communication.UuidMessage;
 
 /**
@@ -56,7 +57,9 @@ public class Server implements ProtocolUser {
 	 */
 	public void close() {
 		try {
-			clientConnections.values().forEach(ServerConnection::close);
+			synchronized (this) {
+				clientConnections.values().forEach(ServerConnection::closeConnection);
+			}
 			genericServer.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -103,9 +106,9 @@ public class Server implements ProtocolUser {
 	 * Broadcasts a given message to all currently connected clients. This method
 	 * iterates through each client connection and sends the specified message.
 	 *
-	 * @param message The message to be broadcasted to all clients.
+	 * @param message The message to be broadcast to all clients.
 	 */
-	public void broadcast(Message<?> message) {
+	public void broadcast(Message message) {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
@@ -117,7 +120,7 @@ public class Server implements ProtocolUser {
 	 * @param message   the message to be broadcast
 	 * @param predicate a predicate to filter the session IDs
 	 */
-	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
+	public void broadcastFiltered(Message message, Predicate<UUID> predicate) {
 		clientConnections.keySet().stream()
 				.filter(predicate)
 				.forEach(key -> clientConnections.get(key).sendMessage(message));
@@ -129,7 +132,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message the message to be sent
 	 */
-	public void route(Message<?> message) {
+	public void route(Message message) {
 		if (clientConnections.containsKey(message.getDestination())) {
 			clientConnections.get(message.getDestination()).sendMessage(message);
 		} else {
@@ -142,7 +145,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message the message to arrive.
 	 */
-	public void registerIncomingMessage(Message<?> message) {
-		this.protocol.receiveMessage(this, message);
+	public void registerIncomingMessage(UnknownMessage message) {
+		protocol.receiveMessage(this, protocol.resolveMessage(this, message));
 	}
 }

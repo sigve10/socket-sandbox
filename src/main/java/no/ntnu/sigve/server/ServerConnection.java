@@ -1,12 +1,12 @@
 package no.ntnu.sigve.server;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.Socket;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.communication.UnknownMessage;
 
 /**
  * A connection from a {@link Server} to one individual client. Handles the connection independent
@@ -14,8 +14,8 @@ import no.ntnu.sigve.communication.Message;
  */
 public class ServerConnection extends Thread {
 	private final Socket clientSocket;
-	private final ObjectInputStream input;
-	private final ObjectOutputStream replyOutput;
+	private final DataInputStream input;
+	private final DataOutputStream replyOutput;
 	private final Server server;
 	private final UUID clientUuid;
 
@@ -37,8 +37,8 @@ public class ServerConnection extends Thread {
 		this.server = server;
 		this.clientUuid = clientUuid;
 
-		replyOutput = new ObjectOutputStream(clientSocket.getOutputStream());
-		input = new ObjectInputStream(clientSocket.getInputStream());
+		replyOutput = new DataOutputStream(clientSocket.getOutputStream());
+		input = new DataInputStream(clientSocket.getInputStream());
 	}
 
 	@Override
@@ -62,16 +62,13 @@ public class ServerConnection extends Thread {
 	 *     the server connection to shut down.
 	 */
 	private boolean readClientRequest() {
-		Message<? extends Serializable> message = null;
+		UnknownMessage message = null;
 		boolean retval = false;
 
 		try {
-			message = (Message<?>) input.readObject();
-		} catch (ClassCastException | ClassNotFoundException e) {
-			e.printStackTrace();
-			retval = true;
+			message = UnknownMessage.fromString(input.readUTF());
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.err.println("(Server) Exception while listening for messages: " + e.getMessage());
 		}
 
 		if (message != null) {
@@ -83,32 +80,18 @@ public class ServerConnection extends Thread {
 		return retval;
 	}
 
-
 	/**
 	 * Sends a message to the client.
 	 *
 	 * @param message the message to send
 	 */
-	public void sendMessage(Message<?> message) {
+	public void sendMessage(Message message) {
 		try {
-			replyOutput.writeObject(message);
+			replyOutput.writeUTF(message.getSerialized());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
-	/**
-	 * Attempts to close the connection.
-	 */
-	public void close() {
-		try {
-			this.clientSocket.close();
-			input.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
 
 	/**
 	 * Closes the connection by shutting down the input stream, output stream,
@@ -116,7 +99,7 @@ public class ServerConnection extends Thread {
 	 * prevent resource leaks. This method should be called when the connection
 	 * is no longer needed or when an exception occurs.
 	 */
-	private void closeConnection() {
+	public void closeConnection() {
 		try {
 			if (input != null) {
 				input.close();

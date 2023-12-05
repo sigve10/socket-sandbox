@@ -1,13 +1,14 @@
 package no.ntnu.sigve.client;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.communication.ProtocolUser;
+import no.ntnu.sigve.communication.UnknownMessage;
 import no.ntnu.sigve.communication.UuidMessage;
 
 /**
@@ -24,7 +25,7 @@ public class Client implements ProtocolUser {
 	private final int port;
 	private final Protocol<Client> protocol;
 
-	private ObjectOutputStream output;
+	private DataOutputStream output;
 	private Socket socket;
 	private UUID sessionId;
 
@@ -49,18 +50,13 @@ public class Client implements ProtocolUser {
 	public void connect() throws IOException {
 		this.socket = new Socket(address, port);
 
-		ObjectInputStream socketResponseStream =
-				new ObjectInputStream(this.socket.getInputStream());
-		this.output = new ObjectOutputStream(this.socket.getOutputStream());
+		DataInputStream socketResponseStream = new DataInputStream(this.socket.getInputStream());
+		this.output = new DataOutputStream(this.socket.getOutputStream());
 
 		UUID uuid = null;
-		try {
-			UuidMessage uuidMessage = (UuidMessage) socketResponseStream.readObject();
-			if (uuidMessage != null) {
-				uuid = uuidMessage.getPayload();
-			}
-		} catch (ClassNotFoundException | ClassCastException e) {
-			//Do nothing
+		String[] serializedParams = socketResponseStream.readUTF().split("\\|");
+		if (UuidMessage.TYPE_IDENTIFIER.equals(serializedParams[2])) {
+			uuid = UUID.fromString(serializedParams[3]);
 		}
 		if (uuid != null) {
 			this.sessionId = uuid;
@@ -90,12 +86,12 @@ public class Client implements ProtocolUser {
 	 *
 	 * @param message to send to the server.
 	 */
-	public void sendOutgoingMessage(Message<?> message) {
+	public void sendOutgoingMessage(Message message) {
 		if (socket == null) {
 			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
 		}
 		try {
-			this.output.writeObject(message);
+			this.output.writeUTF(message.getSerialized());
 		} catch (IOException ioe) {
 			System.err.println("Could not send outgoing message. Here's the stacktrace:");
 			ioe.printStackTrace();
@@ -107,8 +103,8 @@ public class Client implements ProtocolUser {
 	 *
 	 * @param message the received message object
 	 */
-	public void registerIncomingMessage(Message<?> message) {
-		this.protocol.receiveMessage(this, message);
+	public void registerIncomingMessage(UnknownMessage message) {
+		protocol.receiveMessage(this, protocol.resolveMessage(this, message));
 	}
 
 	/**
@@ -116,13 +112,13 @@ public class Client implements ProtocolUser {
 	 * session id.
 	 */
 	public void onClientConnected() {
-		this.protocol.onClientConnect(this, this.sessionId);
+		protocol.onClientConnect(this, this.sessionId);
 	}
 
 	/**
 	 * Notifies the connected protocol that the client has disconnected from the server.
 	 */
 	public void onClientDisconnected() {
-		this.protocol.onClientDisconnect(this, this.sessionId);
+		protocol.onClientDisconnect(this, this.sessionId);
 	}
 }

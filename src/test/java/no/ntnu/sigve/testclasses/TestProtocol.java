@@ -3,6 +3,7 @@ package no.ntnu.sigve.testclasses;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
+import no.ntnu.sigve.communication.UnknownMessage;
 import no.ntnu.sigve.server.Server;
 
 /**
@@ -11,18 +12,29 @@ import no.ntnu.sigve.server.Server;
 public class TestProtocol implements Protocol<Server> {
 	/**
 	 * Class constructor.
-	 *
 	 */
-	public TestProtocol() {
+	public TestProtocol() {}
+
+	@Override
+	public Message resolveMessage(Server caller, UnknownMessage message) {
+		Message resolvedMessage;
+		if (StringMessage.TYPE_IDENTIFIER.equals(message.getTypeIdentifier())) {
+			resolvedMessage = new StringMessage(message.getDestination(), message.getRawPayload());
+		} else {
+			resolvedMessage = message;
+		}
+		return resolvedMessage;
 	}
 
 	@Override
-	public void receiveMessage(Server server, Message<?> message) {
-		switch ((String) message.getPayload()) {
-			case "1" -> server.route(message);
-			case "2" -> server.route(message);
-			default -> {
-				//Do nothing
+	public void receiveMessage(Server server, Message message) {
+		if (message instanceof StringMessage stringMessage) {
+			switch (stringMessage.getString()) {
+				case "1" -> server.route(message);
+				case "2" -> server.route(message);
+				default -> {
+					//Do nothing
+				}
 			}
 		}
 	}

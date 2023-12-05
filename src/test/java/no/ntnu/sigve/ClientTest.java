@@ -4,12 +4,10 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
-import java.io.Serializable;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import no.ntnu.sigve.client.Client;
-import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.server.Server;
+import no.ntnu.sigve.testclasses.StringMessage;
 import no.ntnu.sigve.testclasses.TestClientProtocol;
 import no.ntnu.sigve.testclasses.TestProtocol;
 import org.junit.jupiter.api.AfterEach;
@@ -42,10 +40,10 @@ class ClientTest {
 		return client;
 	}
 
-	private Message<?> waitForMessage(TestClientProtocol protocol) {
-		return await()
+	private StringMessage waitForStringMessage(TestClientProtocol protocol) {
+		return (StringMessage) await()
 				.atMost(5, TimeUnit.SECONDS)
-				.until(protocol::getMessage, Objects::nonNull);
+				.until(protocol::getMessage, message -> message instanceof StringMessage);
 	}
 
 	/**
@@ -90,40 +88,39 @@ class ClientTest {
 
 	@Test
 	void message() {
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
-		assertEquals("1", waitForMessage(protocol).getPayload());
+		client.sendOutgoingMessage(new StringMessage(client.getSessionId(), "1"));
+		assertEquals("1", waitForStringMessage(protocol).getString());
 	}
 
 	@Test
 	void testThatMessagesReturnsInOrder() {
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "1"));
-		client.sendOutgoingMessage(new Message<>(client.getSessionId(), "2"));
-		assertEquals("1", waitForMessage(protocol).getPayload());
-		assertEquals("2", waitForMessage(protocol).getPayload());
+		client.sendOutgoingMessage(new StringMessage(client.getSessionId(), "1"));
+		client.sendOutgoingMessage(new StringMessage(client.getSessionId(), "2"));
+		assertEquals("1", waitForStringMessage(protocol).getString());
+		assertEquals("2", waitForStringMessage(protocol).getString());
 	}
 
 	@Test
 	void testBroadcast() {
 		TestClientProtocol clientProtocol = new TestClientProtocol();
 		createClient(clientProtocol);
-		Message<String> message = new Message<>(null);
-		message.setPayload("Hello");
+		StringMessage message = new StringMessage(null, "Hello");
 		server.broadcast(message);
-		assertEquals("Hello", waitForMessage(clientProtocol).getPayload());
+		assertEquals("Hello", waitForStringMessage(clientProtocol).getString());
 	}
 
 	@Test
 	void testRoute() {
-		server.route(new Message<>(client.getSessionId(), "Hello"));
-		assertEquals("Hello", waitForMessage(protocol).getPayload());
+		server.route(new StringMessage(client.getSessionId(), "Hello"));
+		assertEquals("Hello", waitForStringMessage(protocol).getString());
 	}
 
 	@Test
 	void testSimultaneousSending() {
-		client.sendOutgoingMessage(new Message<Serializable>(client.getSessionId(), "1"));
-		client1.sendOutgoingMessage(new Message<Serializable>(client1.getSessionId(), "1"));
-		assertEquals("1", waitForMessage(protocol).getPayload());
-		assertEquals("1", waitForMessage(protocol1).getPayload());
+		client.sendOutgoingMessage(new StringMessage(client.getSessionId(), "1"));
+		client1.sendOutgoingMessage(new StringMessage(client1.getSessionId(), "1"));
+		assertEquals("1", waitForStringMessage(protocol).getString());
+		assertEquals("1", waitForStringMessage(protocol1).getString());
 	}
 
 }
