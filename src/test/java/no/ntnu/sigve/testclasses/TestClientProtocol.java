@@ -9,14 +9,14 @@ import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 
 public class TestClientProtocol implements Protocol<Client> {
-	private final List<Message<?>> messages;
+	private final List<Message> messages;
 
 	public TestClientProtocol() {
 		messages = new ArrayList<>();
 	}
 
 	@Override
-	public void receiveMessage(Client caller, Message<?> message) {
+	public void receiveMessage(Client caller, Message message) {
 		this.messages.add(message);
 	}
 
@@ -30,7 +30,7 @@ public class TestClientProtocol implements Protocol<Client> {
 
 	}
 
-	public Message<?> getMessage() {
+	public Message getMessage() {
 		return messages.isEmpty() ? null : messages.remove(0);
 	}
 }

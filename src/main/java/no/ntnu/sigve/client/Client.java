@@ -1,16 +1,13 @@
 package no.ntnu.sigve.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SequenceWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.UUID;
+import no.ntnu.sigve.MessageMapper;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.communication.ProtocolUser;
@@ -46,7 +43,7 @@ public class Client implements ProtocolUser {
 		this.address = address;
 		this.port = port;
 		this.protocol = protocol;
-		this.json = new ObjectMapper();
+		this.json = new MessageMapper();
 	}
 
 	/**
@@ -56,6 +53,14 @@ public class Client implements ProtocolUser {
 	 */
 	public void connect() throws IOException {
 		this.socket = new Socket(address, port);
+		MappingIterator<Message> messages = json.readerFor(Message.class).readValues(socket.getInputStream());
+		Message message = messages.hasNext() ? messages.next() : null;
+		if (message instanceof UuidMessage uuidMessage) {
+			this.sessionId = uuidMessage.getId();
+			System.out.println("Received session ID: " + sessionId);
+		} else {
+			throw new IllegalStateException("First received message was not UuidMessage");
+		}
 
 		new ClientListener(this, socket.getInputStream()).start();
 		this.output = json.writer().writeValues(this.socket.getOutputStream());
@@ -79,16 +84,16 @@ public class Client implements ProtocolUser {
 	 *
 	 * @param message to send to the server.
 	 */
-	public void sendOutgoingMessage(Message<?> message) {
+	public void sendOutgoingMessage(Message message) {
 		if (socket == null) {
 			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
 		}
 		try {
-			output.write(message, json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+			output.write(message, json.getTypeFactory().constructType(Message.class));
 		} catch (JsonProcessingException jpe) {
 			System.err.printf(
-					"Could not serialize message%nMessage type: %s%nPayload type: %s%nMessage: %s%n",
-					message.getClass(), message.getPayload().getClass(), message
+					"Could not serialize message%nMessage type: %s%nMessage: %s%n",
+					message.getClass(), message
 			);
 			jpe.printStackTrace();
 		} catch (IOException ioe) {
@@ -102,11 +107,7 @@ public class Client implements ProtocolUser {
 	 *
 	 * @param message the received message object
 	 */
-	public void registerIncomingMessage(Message<?> message) {
-		if (message instanceof UuidMessage uuidMessage) {
-			this.sessionId = uuidMessage.getPayload();
-			System.out.println("Received session ID: " + sessionId);
-		}
+	public void registerIncomingMessage(Message message) {
 		this.protocol.receiveMessage(this, message);
 	}
 

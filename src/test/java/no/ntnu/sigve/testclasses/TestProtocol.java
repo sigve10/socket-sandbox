@@ -17,12 +17,14 @@ public class TestProtocol implements Protocol<Server> {
 	}
 
 	@Override
-	public void receiveMessage(Server server, Message<?> message) {
-		switch ((String) message.getPayload()) {
-			case "1" -> server.route(message);
-			case "2" -> server.route(message);
-			default -> {
-				//Do nothing
+	public void receiveMessage(Server server, Message message) {
+		if (message instanceof StringMessage stringMessage) {
+			switch (stringMessage.getPayload()) {
+				case "1" -> server.route(message);
+				case "2" -> server.route(message);
+				default -> {
+					//Do nothing
+				}
 			}
 		}
 	}

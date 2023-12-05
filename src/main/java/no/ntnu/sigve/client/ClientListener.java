@@ -1,25 +1,20 @@
 package no.ntnu.sigve.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import java.io.IOException;
 import java.io.InputStream;
+import no.ntnu.sigve.MessageMapper;
 import no.ntnu.sigve.communication.Message;
 
 public class ClientListener extends Thread {
 
 	private final Client client;
 	private final InputStream messageStream;
-	private final ObjectMapper json;
-	private final ObjectReader jsonReader;
+	private final MessageMapper json;
 
 	public ClientListener(Client client, InputStream messageStream) {
 		this.client = client;
 		this.messageStream = messageStream;
-		this.json = new ObjectMapper();
-		this.jsonReader = json.readerFor(json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+		this.json = new MessageMapper();
 	}
 
 	/**
@@ -29,9 +24,9 @@ public class ClientListener extends Thread {
 	@Override
 	public void run() {
 		try {
-			MappingIterator<Message<?>> messages;
-			while ((messages = jsonReader.readValues(messageStream)) != null) {
-				messages.forEachRemaining(this::handleIncomingMessage);
+			synchronized (this) {
+				Message msg = json.waitForMessage(messageStream);
+				handleIncomingMessage(msg);
 			}
 		} catch (IOException ioe) {
 			handleException(ioe);
@@ -47,7 +42,7 @@ public class ClientListener extends Thread {
 	 * @param message The incoming message to handle.
 	 */
 
-	private synchronized void handleIncomingMessage(Message<?> message) {
+	private synchronized void handleIncomingMessage(Message message) {
 		this.client.registerIncomingMessage(message);
 	}
 

@@ -1,15 +1,12 @@
 package no.ntnu.sigve.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.SequenceWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.util.UUID;
+import no.ntnu.sigve.MessageMapper;
 import no.ntnu.sigve.communication.Message;
 
 /**
@@ -22,8 +19,7 @@ public class ServerConnection extends Thread {
 	private final SequenceWriter replyOutput;
 	private final Server server;
 	private final UUID clientUuid;
-	private final ObjectMapper json;
-	private final ObjectReader jsonReader;
+	private final MessageMapper json;
 
 	/**
 	 * Creates a new threaded connection from a {@link Server} to a
@@ -43,8 +39,7 @@ public class ServerConnection extends Thread {
 		this.server = server;
 		this.clientUuid = clientUuid;
 
-		this.json = new ObjectMapper();
-		this.jsonReader = json.readerFor(json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+		this.json = new MessageMapper();
 		this.replyOutput = json.writer().writeValues(clientSocket.getOutputStream());
 		this.input = clientSocket.getInputStream();
 	}
@@ -70,27 +65,22 @@ public class ServerConnection extends Thread {
 	 * 		the server connection to shut down.
 	 */
 	private boolean readClientRequest() {
-		MappingIterator<Message<?>> messages = null;
+		Message message = null;
 		boolean retval = false;
 
 		try {
-			messages = jsonReader.readValues(input);
-			//message = json.readValue((String) input.readObject(), new TypeReference<>(){});
+			message = json.waitForMessage(input);
 		} catch (ClassCastException e) {
 			System.err.println("Discarding un-castable request from client. " + e.getMessage());
 			retval = true;
 		} catch (IOException e) {
 			System.err.println("Could not handle request. " + e.getMessage());
 		}
-
-		if (messages != null) {
-			messages.forEachRemaining(message -> {
-				message.assignSource(clientUuid);
-				server.registerIncomingMessage(message);
-			});
+		if (message != null) {
+			message.assignSource(clientUuid);
+			server.registerIncomingMessage(message);
 			retval = true;
 		}
-
 		return retval;
 	}
 
@@ -100,13 +90,13 @@ public class ServerConnection extends Thread {
 	 *
 	 * @param message the message to send
 	 */
-	public void sendMessage(Message<?> message) {
+	public void sendMessage(Message message) {
 		try {
-			replyOutput.write(message, json.getTypeFactory().constructType(new TypeReference<Message<?>>(){}));
+			replyOutput.write(message, json.getTypeFactory().constructType(Message.class));
 		} catch (JsonProcessingException jpe) {
 			System.err.printf(
-					"Could not serialize message%nMessage type: %s%nPayload type: %s%nMessage: %s%n",
-					message.getClass(), message.getPayload().getClass(), message
+					"Could not serialize message%nMessage type: %s%nMessage: %s%n",
+					message.getClass(), message
 			);
 			jpe.printStackTrace();
 		} catch (IOException e) {
@@ -115,25 +105,12 @@ public class ServerConnection extends Thread {
 	}
 
 	/**
-	 * Attempts to close the connection.
-	 */
-	public void close() {
-		try {
-			this.clientSocket.close();
-			input.close();
-		} catch (IOException e) {
-			System.err.println("Could not close socket. " + e.getMessage());
-		}
-	}
-
-
-	/**
 	 * Closes the connection by shutting down the input stream, output stream,
 	 * and the socket. Ensures that all resources are properly released to
 	 * prevent resource leaks. This method should be called when the connection
 	 * is no longer needed or when an exception occurs.
 	 */
-	private void closeConnection() {
+	public void closeConnection() {
 		try {
 			if (input != null) {
 				input.close();

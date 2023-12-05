@@ -3,14 +3,21 @@ package no.ntnu.sigve.communication;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.deser.std.UUIDDeserializer;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import com.fasterxml.jackson.databind.ser.std.UUIDSerializer;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.BeanSerializerFactory;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -20,48 +27,26 @@ import java.util.UUID;
  * sent.</li>
  * <li>{@link Message#source Source} is the client from which the message was sent. This should be
  * set server-side to ensure global recognition of the source.</li>
- * <li>{@link Message#payload Payload} is the content of the message. A string containing the
  * information to be sent.</li></ul>
  */
-@JsonSerialize(using = Message.MessageSerializer.class)
-public class Message<T extends Serializable> implements Serializable {
-	@JsonSerialize(using = UUIDSerializer.class)
-	@JsonDeserialize(using = UUIDDeserializer.class)
+@JsonDeserialize()
+public class Message implements Serializable {
 	private UUID source;
-
-	@JsonSerialize(using = UUIDSerializer.class)
-	@JsonDeserialize(using = UUIDDeserializer.class)
 	private UUID destination;
-
-	private T payload;
 
 	/**
 	 * Creates a new message for the given destination.
 	 *
 	 * @param source the address of the client from which the message was sent
 	 * @param destination the destination of the message
-	 * @param payload the body of the message
 	 */
 	@JsonCreator
 	public Message(
-			@JsonProperty("source") UUID source,
-			@JsonProperty("destionation") UUID destination,
-			@JsonProperty("payload") T payload) {
-		System.out.println("owo");
+			@JsonProperty("destination") UUID destination,
+			@JsonProperty("source") UUID source
+	) {
+		this.destination = destination;
 		this.source = source;
-		this.destination = destination;
-		this.payload = payload;
-	}
-
-	/**
-	 * Creates a new message for the given destination.
-	 *
-	 * @param destination the destination of the message
-	 * @param payload the body of the message
-	 */
-	public Message(UUID destination, T payload) {
-		this.destination = destination;
-		this.payload = payload;
 	}
 
 	/**
@@ -70,7 +55,7 @@ public class Message<T extends Serializable> implements Serializable {
 	 * @param destination the destination of the message
 	 */
 	public Message(UUID destination) {
-		this(destination, null);
+		this.destination = destination;
 	}
 
 	/**
@@ -91,6 +76,7 @@ public class Message<T extends Serializable> implements Serializable {
 	 *
 	 * @return the source of the message
 	 */
+	@JsonProperty
 	public final UUID getSource() {
 		return this.source;
 	}
@@ -100,49 +86,51 @@ public class Message<T extends Serializable> implements Serializable {
 	 *
 	 * @return the destination of the message
 	 */
+	@JsonProperty
 	public final UUID getDestination() {
 		return this.destination;
 	}
 
-	/**
-	 * Sets the message's payload.
-	 *
-	 * @param payload the body of the message
-	 */
-	public final void setPayload(T payload) {
-		if (this.payload == null) {
-			this.payload = payload;
-		} else {
-			System.err.println("Could not set payload: Message already has a payload.");
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Message message = (Message) o;
+		return Objects.equals(source, message.source) && Objects.equals(destination, message.destination);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(source, destination);
+	}
+
+	public static class MessageSerializer extends JsonSerializer<Message> {
+		@Override
+		public void serialize(Message message, JsonGenerator jgen, SerializerProvider provider) throws IOException {
+			jgen.writeStartObject();
+			jgen.writeObjectField("class", message.getClass());
+			JavaType javaType = provider.constructType(message.getClass());
+			JsonSerializer<Object> serializer = BeanSerializerFactory.instance.createSerializer(provider, javaType);
+			// this is basically your 'writeAllFields()'-method:
+			serializer.unwrappingSerializer(null).serialize(message, jgen, provider);
+			jgen.writeEndObject();
 		}
 	}
 
-	/**
-	 * Gets this message's payload.
-	 *
-	 * @return this message's payload
-	 */
-	public final T getPayload() {
-		return this.payload;
-	}
+	public static class MessageDeserializer extends StdDeserializer<Message> {
 
-	public static class MessageSerializer extends StdSerializer<Message<?>> {
-
-		public MessageSerializer() {
-			this(null);
-		}
-
-		public MessageSerializer(Class<Message<?>> t) {
-			super(t);
+		public MessageDeserializer() {
+			super(Message.class);
 		}
 
 		@Override
-		public void serialize(Message<?> message, JsonGenerator gen, SerializerProvider provider) throws IOException {
-			gen.writeStartObject();
-			gen.writeStringField("source", message.source == null ? null : message.source.toString());
-			gen.writeStringField("destination", message.destination == null ? null : message.destination.toString());
-			gen.writeObjectField("destination", message.getPayload());
-			gen.writeEndObject();
+		public Message deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+			ObjectNode root = jsonParser.readValueAsTree();
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode node = root.remove("class");
+			Class<? extends Message> messageClass = mapper.readerFor(new TypeReference<Class<? extends Message>>() {}).readValue(node);
+
+			return mapper.readerFor(messageClass).readValue(root);
 		}
 	}
 }

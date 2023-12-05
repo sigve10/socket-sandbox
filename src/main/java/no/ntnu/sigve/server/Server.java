@@ -1,8 +1,5 @@
 package no.ntnu.sigve.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -57,9 +54,9 @@ public class Server implements ProtocolUser {
 	/**
 	 * Closes the server, and terminates all connected clients.
 	 */
-	public void close() {
+	public synchronized void close() {
 		try {
-			clientConnections.values().forEach(ServerConnection::close);
+			clientConnections.values().forEach(ServerConnection::closeConnection);
 			genericServer.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
@@ -108,7 +105,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message The message to be broadcasted to all clients.
 	 */
-	public void broadcast(Message<?> message) {
+	public void broadcast(Message message) {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
@@ -120,7 +117,7 @@ public class Server implements ProtocolUser {
 	 * @param message   the message to be broadcast
 	 * @param predicate a predicate to filter the session IDs
 	 */
-	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
+	public void broadcastFiltered(Message message, Predicate<UUID> predicate) {
 		clientConnections.keySet().stream()
 				.filter(predicate)
 				.forEach(key -> clientConnections.get(key).sendMessage(message));
@@ -132,7 +129,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message the message to be sent
 	 */
-	public void route(Message<?> message) {
+	public void route(Message message) {
 		if (clientConnections.containsKey(message.getDestination())) {
 			clientConnections.get(message.getDestination()).sendMessage(message);
 		} else {
@@ -145,7 +142,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message the message to arrive.
 	 */
-	public void registerIncomingMessage(Message<?> message) {
+	public void registerIncomingMessage(Message message) {
 		this.protocol.receiveMessage(this, message);
 	}
 }
