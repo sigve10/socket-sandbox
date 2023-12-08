@@ -77,9 +77,6 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 			throw new IOException("Error receiving session ID", e);
 		}
 	}
-	
-	
-	
 
     private void startListener(ClientSocket socket, String protocol) {
         Thread listenerThread = new Thread(() -> {
@@ -123,6 +120,7 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 	public void sendOutgoingMessage(Message<?> message) throws IOException {
 		System.out.println("Sending message: " + message.getPayload());
 		if (message.isUdp() && udpSocket != null) {
+			message.assignSource(sessionId);
 			udpSocket.sendMessage(message);
 		} else if (tcpSocket != null) {
 			tcpSocket.sendMessage(message);

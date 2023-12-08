@@ -100,7 +100,7 @@ public class Server {
 		Message<?> message = deserialize(packet.getData(), packet.getLength());
 	
 		// Use the session ID from the message to identify the client
-		UUID sessionId = message.getSessionId();
+		UUID sessionId = message.getSource();
 		if (sessionId == null) {
 			// Handle error or create a new session ID
 			System.err.println("Received UDP message with no session ID.");
