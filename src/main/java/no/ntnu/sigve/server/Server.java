@@ -105,7 +105,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message The message to be broadcasted to all clients.
 	 */
-	public void broadcast(Message<?> message) {
+	public synchronized void broadcast(Message<?> message) {
 		for (ServerConnection connection : clientConnections.values()) {
 			connection.sendMessage(message);
 		}
@@ -117,7 +117,7 @@ public class Server implements ProtocolUser {
 	 * @param message   the message to be broadcast
 	 * @param predicate a predicate to filter the session IDs
 	 */
-	public void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
+	public synchronized void broadcastFiltered(Message<?> message, Predicate<UUID> predicate) {
 		clientConnections.keySet().stream()
 				.filter(predicate)
 				.forEach(key -> clientConnections.get(key).sendMessage(message));
@@ -129,7 +129,7 @@ public class Server implements ProtocolUser {
 	 *
 	 * @param message the message to be sent
 	 */
-	public void route(Message<?> message) {
+	public synchronized void route(Message<?> message) {
 		if (clientConnections.containsKey(message.getDestination())) {
 			clientConnections.get(message.getDestination()).sendMessage(message);
 		} else {
