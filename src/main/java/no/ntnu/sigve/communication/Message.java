@@ -93,13 +93,6 @@ public class Message<T extends Serializable> implements Serializable {
 		return this.payload;
 	}
 
-	public UUID getSessionId() {
-		return sessionId;
-	}
-
-	public void setSessionId(UUID sessionId) {
-		this.sessionId = sessionId;
-	}
 
 	public boolean isUdp() {
 		return isUdp;
@@ -109,4 +102,7 @@ public class Message<T extends Serializable> implements Serializable {
 		this.isUdp = isUdp;
 	}
 
+	public UUID getSessionId() {
+        return sessionId;
+    }
 }

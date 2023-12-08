@@ -7,10 +7,13 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.UuidMessage;
 import no.ntnu.sigve.sockets.ClientSocket;
+import no.ntnu.sigve.sockets.ClientSocketFactory;
 import no.ntnu.sigve.sockets.TcpClientSocket;
 import no.ntnu.sigve.sockets.UdpClientSocket;
 
@@ -19,83 +22,85 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
  * It can send and receive messages using either or both protocols.
  */
 
-public class Client {
-	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
+ public class Client {
+    private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
 
-	private final String address;
-	private final LinkedList<Message<?>> incomingMessages;
-	private final List<MessageObserver> observers;
+    private final String address;
+    private final int tcpPort;
+    private final int udpPort;
+    private final ConcurrentLinkedQueue<Message<?>> incomingMessages;
+    private final CopyOnWriteArrayList<MessageObserver> observers;
+    private final ClientSocketFactory socketFactory;
 
-	private TcpClientSocket tcpSocket;
-	private ClientSocket udpSocket;
-	protected UUID sessionId;
-	private volatile boolean stopUdpListener = false;
-	private volatile Thread udpListenerThread;
+    private ClientSocket tcpSocket;
+    private ClientSocket udpSocket;
+    protected UUID sessionId;
+    private Thread tcpListenerThread;
+    private Thread udpListenerThread;
+
+    public Client(String address, int tcpPort, int udpPort, ClientSocketFactory socketFactory) {
+        this.address = address;
+        this.tcpPort = tcpPort;
+        this.udpPort = udpPort;
+        this.incomingMessages = new ConcurrentLinkedQueue<>();
+        this.observers = new CopyOnWriteArrayList<>();
+        this.socketFactory = socketFactory;
+    }
+
+	public void connect() throws IOException {
+        // Connect TCP
+        if (tcpPort > 0) {
+            tcpSocket = socketFactory.createSocket("TCP", address, tcpPort);
+            tcpSocket.connect();
+            receiveSessionIdFromTcp();  // Receive session ID from the server
+            startListener(tcpSocket, "TCP"); // Listen for TCP messages
+        }
+        // Connect UDP
+        if (udpPort > 0) {
+            udpSocket = socketFactory.createSocket("UDP", address, udpPort);
+            udpSocket.connect();
+            startListener(udpSocket, "UDP"); // Listen for UDP messages
+        }
+    }
+
+	private void receiveSessionIdFromTcp() throws IOException {
+		try {
+			Message<?> message = tcpSocket.receiveMessage();
+			if (message instanceof UuidMessage) {
+				UuidMessage uuidMessage = (UuidMessage) message;
+				this.sessionId = uuidMessage.getPayload(); // Retrieves the UUID payload
+				System.out.println("Received session ID: " + this.sessionId);
+			} else {
+				throw new IOException("First message received is not a UUID message.");
+			}
+		} catch (ClassNotFoundException e) {
+			throw new IOException("Error receiving session ID", e);
+		}
+	}
+	
+	
 	
 
-
-	/**
-     * Constructs a client with the ability to use both TCP and UDP sockets.
-     *
-     * @param address The server address to connect to.
-     * @param tcpPort The server TCP port to connect to.
-     * @param udpPort The server UDP port to connect to.
-     */
-	public Client(String address, int tcpPort, int udpPort) {
-		this.address = address;
-		this.incomingMessages = new LinkedList<>();
-		this.observers = new ArrayList<>();
-		this.tcpSocket = new TcpClientSocket(address, tcpPort);
-		this.udpSocket = new UdpClientSocket(address, udpPort);
-
-	}
-
-	/**
-     * Constructs a client with the ability to use only TCP sockets.
-     *
-     * @param address The server address to connect to.
-     * @param tcpPort The server TCP port to connect to.
-     * @param isTcp   Indicator of TCP usage, true to use TCP.
-     */
-	public Client(String address, int tcpPort, boolean isTcp) {
-		this.address = address;
-		this.incomingMessages = new LinkedList<>();
-		this.observers = new ArrayList<>();
-		if (isTcp) {
-			this.tcpSocket = new TcpClientSocket(address, tcpPort);
-		}
-	}
-
-	/**
-     * Constructs a client with the ability to use only UDP sockets.
-     *
-     * @param address The server address to connect to.
-     * @param udpPort The server UDP port to connect to.
-     */
-	public Client(String address, int udpPort) {
-		this.address = address;
-		this.incomingMessages = new LinkedList<>();
-		this.observers = new ArrayList<>();
-		this.udpSocket = new UdpClientSocket(address, udpPort);
-	}
-
-	/**
-     * Initiates the connection process to the server over TCP and/or UDP.
-     * A session ID is expected to be received for further communication.
-     *
-     * @throws IOException            If an I/O error occurs when opening the connection.
-     * @throws ClassNotFoundException If the class of the received object cannot be found.
-     */
-	public void connect() throws IOException, ClassNotFoundException {
-		if (tcpSocket != null) {
-			tcpSocket.connect();
-			listenForTcpMessages(); // Start listening for TCP messages in a separate thread
-		}
-		if (udpSocket != null) {
-			udpSocket.connect();
-			this.startUdpListener(); // Start listening for UDP messages
-		}
-	}
+    private void startListener(ClientSocket socket, String protocol) {
+        Thread listenerThread = new Thread(() -> {
+            while (!socket.isClosed()) {
+                try {
+                    Message<?> message = socket.receiveMessage();
+                    if (message != null) {
+                        registerIncomingMessage(message);
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    System.err.println(protocol + " listener error: " + e.getMessage());
+                }
+            }
+        });
+        listenerThread.start();
+        if (protocol.equals("TCP")) {
+            tcpListenerThread = listenerThread;
+        } else if (protocol.equals("UDP")) {
+            udpListenerThread = listenerThread;
+        }
+    }
 	
 
 	/**
@@ -127,7 +132,6 @@ public class Client {
 	}
 	
 
-
 	public synchronized void registerIncomingMessage(Message<?> message) {
 		System.out.println("Registering incoming message: " + message.getPayload());
 		this.incomingMessages.add(message);
@@ -136,14 +140,16 @@ public class Client {
 
 	public synchronized Message<?> nextIncomingMessage() {
 		System.out.println("Checking for incoming messages. Queue size: " + incomingMessages.size());
-		if (!this.incomingMessages.isEmpty()) {
-			Message<?> nextMessage = this.incomingMessages.remove(0); 
+		Message<?> nextMessage = this.incomingMessages.poll();  // Use poll() instead of remove(0)
+		if (nextMessage != null) {
 			System.out.println("Returning the next incoming message: " + nextMessage.getPayload());
 			return nextMessage;
+		} else {
+			System.out.println("No incoming messages available.");
+			return null;
 		}
-		System.out.println("No incoming messages available.");
-		return null;
 	}
+
 	
 	
 	/**
@@ -177,70 +183,31 @@ public class Client {
 		}
 	}
 
-	/**
-	 * Starts a UDP listener in a new thread to receive incoming messages.
-	 */
-	private void startUdpListener() {
-		udpListenerThread = new Thread(() -> {
-			try {
-				System.out.println("UDP Listener started on port: " + ((UdpClientSocket)udpSocket).getServerPort());
-				while (!udpSocket.isClosed()) {
-					Message<?> message = udpSocket.receiveMessage();
-					if (message != null) {
-						registerIncomingMessage(message);
-					}
-				}
-			} catch (IOException e) {
-				System.err.println("UDP listener error: " + e.getMessage());
-			} catch (Exception e) {
-				System.err.println("Unexpected error in UDP listener: " + e.getMessage());
-			}
-		});
-		udpListenerThread.start();
-	}
 
-
-	
-	
-	
-	
-	/**
-     * Closes the client's TCP and UDP sockets and releases any system resources associated with them.
-     *
-     * @throws IOException If an I/O error occurs when closing the sockets.
-     */
 	public void close() throws IOException {
-		stopUdpListener = true;
-		
+		// Close both TCP and UDP sockets
+		if (tcpSocket != null) {
+			tcpSocket.close();
+		}
 		if (udpSocket != null) {
-			while (udpListenerThread.isAlive()) {
-				try {
-					udpListenerThread.join();
-				} catch (InterruptedException e) {
-					// Ignore interrupted exceptions
-				}
-			}
-		
 			udpSocket.close();
 		}
-	}
-
-	public TcpClientSocket getTcpSocket() {
-		return tcpSocket;
-	}
-
-	private void listenForTcpMessages() {
-		new Thread(() -> {
-			try {
-				while (!tcpSocket.isClosed()) {
-					Message<?> message = tcpSocket.receiveMessage();
-					if (message != null) {
-						registerIncomingMessage(message);
-					}
-				}
-			} catch (IOException | ClassNotFoundException e) {
-				// Handle exceptions as appropriate
+		// Attempt to join both listener threads
+		try {
+			if (tcpListenerThread != null && tcpListenerThread.isAlive()) {
+				tcpListenerThread.join();
 			}
-		}).start();
+			if (udpListenerThread != null && udpListenerThread.isAlive()) {
+				udpListenerThread.join();
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		try {
+			Thread.sleep(1000); // Adjust the delay as needed
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
+	
 }
