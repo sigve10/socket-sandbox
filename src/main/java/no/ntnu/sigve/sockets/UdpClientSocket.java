@@ -11,27 +11,23 @@ import java.net.InetAddress;
 import no.ntnu.sigve.communication.Message;
 
 /**
- * .
+ * A ClientSocket for a UDP connection.
  */
 public class UdpClientSocket implements ClientSocket {
-
-	private final String serverAddress;
 	private final int serverPort;
 	private DatagramSocket socket;
 	private InetAddress inetAddress;
 	private DatagramPacket packet;
 
 	/**
-	 * .
+	 * Creates a new UDPClientSocket.
 	 *
-	 * @param serverAddress .
-	 * @param serverPort .
+	 * @param serverPort the port for the socket to connect to
 	 */
-	public UdpClientSocket(String serverAddress, int serverPort) {
+	public UdpClientSocket(int serverPort) {
 		if (serverPort <= 0 || serverPort > 65535) {
 			throw new IllegalArgumentException("Invalid port number");
 		}
-		this.serverAddress = serverAddress;
 		this.serverPort = serverPort;
 
 		byte[] buffer = new byte[65535];

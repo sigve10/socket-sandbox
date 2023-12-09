@@ -9,7 +9,6 @@ import no.ntnu.sigve.sockets.ClientSocket;
 import no.ntnu.sigve.sockets.ClientSocketFactory;
 import no.ntnu.sigve.sockets.TcpClientSocket;
 import no.ntnu.sigve.sockets.TransportProtocol;
-import no.ntnu.sigve.sockets.UdpClientSocket;
 
 /**
  * A client connection to a server. Capable of continuously reading information from the client and
@@ -19,8 +18,6 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
  * @see Client#sendOutgoingMessage(Message) sendOutgoingMessage
  */
 public class Client implements ProtocolUser {
-	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
-
 	private final String address;
 	private final int tcpPort;
 	private final int udpPort;

@@ -1,7 +1,6 @@
 package no.ntnu.sigve.client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.sockets.ClientSocket;
 
@@ -14,6 +13,12 @@ public class ClientListener extends Thread {
 	Client client;
 	ClientSocket socket;
 
+	/**
+	 * Creates a new thread which listens for incoming messages to a client.
+	 *
+	 * @param client the client the thread is listening for
+	 * @param socket the socket the listener is listening through
+	 */
 	public ClientListener(Client client, ClientSocket socket) {
 		this.client = client;
 		this.socket = socket;
@@ -29,6 +34,9 @@ public class ClientListener extends Thread {
 			Message<?> incomingMessage;
 			do {
 				incomingMessage = socket.receiveMessage();
+				if (incomingMessage != null) {
+					handleIncomingMessage(incomingMessage);
+				}
 			} while (incomingMessage != null);
 		} catch (IOException | ClassNotFoundException e) {
 			handleException(e);
@@ -43,7 +51,6 @@ public class ClientListener extends Thread {
 	 *
 	 * @param message The incoming message to handle.
 	 */
-
 	private synchronized void handleIncomingMessage(Message<?> message) {
 		this.client.registerIncomingMessage(message);
 	}
