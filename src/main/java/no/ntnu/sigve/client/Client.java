@@ -1,11 +1,6 @@
 package no.ntnu.sigve.client;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -14,54 +9,61 @@ import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.UuidMessage;
 import no.ntnu.sigve.sockets.ClientSocket;
 import no.ntnu.sigve.sockets.ClientSocketFactory;
-import no.ntnu.sigve.sockets.TcpClientSocket;
-import no.ntnu.sigve.sockets.UdpClientSocket;
 
 /**
  * Represents a client capable of establishing TCP and/or UDP connections to a server.
  * It can send and receive messages using either or both protocols.
  */
 
- public class Client {
-    private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
+public class Client {
+	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
 
-    private final String address;
-    private final int tcpPort;
-    private final int udpPort;
-    private final ConcurrentLinkedQueue<Message<?>> incomingMessages;
-    private final CopyOnWriteArrayList<MessageObserver> observers;
-    private final ClientSocketFactory socketFactory;
+	private final String address;
+	private final int tcpPort;
+	private final int udpPort;
+	private final ConcurrentLinkedQueue<Message<?>> incomingMessages;
+	private final CopyOnWriteArrayList<MessageObserver> observers;
+	private final ClientSocketFactory socketFactory;
 
-    private ClientSocket tcpSocket;
-    private ClientSocket udpSocket;
-    protected UUID sessionId;
-    private Thread tcpListenerThread;
-    private Thread udpListenerThread;
+	private ClientSocket tcpSocket;
+	private ClientSocket udpSocket;
+	protected UUID sessionId;
+	private Thread tcpListenerThread;
+	private Thread udpListenerThread;
 
-    public Client(String address, int tcpPort, int udpPort, ClientSocketFactory socketFactory) {
-        this.address = address;
-        this.tcpPort = tcpPort;
-        this.udpPort = udpPort;
-        this.incomingMessages = new ConcurrentLinkedQueue<>();
-        this.observers = new CopyOnWriteArrayList<>();
-        this.socketFactory = socketFactory;
-    }
+	public Client(String address, int tcpPort, ClientSocketFactory socketFactory) {
+		this.address = address;
+		this.tcpPort = tcpPort;
+		this.udpPort = 0;
+		this.incomingMessages = new ConcurrentLinkedQueue<>();
+		this.observers = new CopyOnWriteArrayList<>();
+		this.socketFactory = socketFactory;
+	}
+
+	public Client(String address, int tcpPort, int udpPort, ClientSocketFactory socketFactory) {
+		this.address = address;
+		this.tcpPort = tcpPort;
+		this.udpPort = udpPort;
+		this.incomingMessages = new ConcurrentLinkedQueue<>();
+		this.observers = new CopyOnWriteArrayList<>();
+		this.socketFactory = socketFactory;
+	}
 
 	public void connect() throws IOException {
-        // Connect TCP
-        if (tcpPort > 0) {
-            tcpSocket = socketFactory.createSocket("TCP", address, tcpPort);
-            tcpSocket.connect();
-            receiveSessionIdFromTcp();  // Receive session ID from the server
-            startListener(tcpSocket, "TCP"); // Listen for TCP messages
-        }
-        // Connect UDP
-        if (udpPort > 0) {
-            udpSocket = socketFactory.createSocket("UDP", address, udpPort);
-            udpSocket.connect();
-            startListener(udpSocket, "UDP"); // Listen for UDP messages
-        }
-    }
+		// Connect TCP
+		if (tcpPort > 0) {
+			tcpSocket = socketFactory.createSocket("TCP", address, tcpPort);
+			tcpSocket.connect();
+			receiveSessionIdFromTcp();  // Receive session ID from the server
+			startListener(tcpSocket, "TCP"); // Listen for TCP messages
+		}
+		// Connect UDP
+		if (udpPort > 0) {
+			udpSocket = socketFactory.createSocket("UDP", address, udpPort);
+			udpSocket.connect();
+			startListener(udpSocket, "UDP"); // Listen for UDP messages
+		}
+	}
 
 	private void receiveSessionIdFromTcp() throws IOException {
 		try {
@@ -78,27 +80,26 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 		}
 	}
 
-    private void startListener(ClientSocket socket, String protocol) {
-        Thread listenerThread = new Thread(() -> {
-            while (!socket.isClosed()) {
-                try {
-                    Message<?> message = socket.receiveMessage();
-                    if (message != null) {
-                        registerIncomingMessage(message);
-                    }
-                } catch (IOException | ClassNotFoundException e) {
-                    System.err.println(protocol + " listener error: " + e.getMessage());
-                }
-            }
-        });
-        listenerThread.start();
-        if (protocol.equals("TCP")) {
-            tcpListenerThread = listenerThread;
-        } else if (protocol.equals("UDP")) {
-            udpListenerThread = listenerThread;
-        }
-    }
-	
+	private void startListener(ClientSocket socket, String protocol) {
+		Thread listenerThread = new Thread(() -> {
+			while (!socket.isClosed()) {
+				try {
+					Message<?> message = socket.receiveMessage();
+					if (message != null) {
+						registerIncomingMessage(message);
+					}
+				} catch (IOException | ClassNotFoundException e) {
+					System.err.println(protocol + " listener error: " + e.getMessage());
+				}
+			}
+		});
+		listenerThread.start();
+		if (protocol.equals("TCP")) {
+			tcpListenerThread = listenerThread;
+		} else if (protocol.equals("UDP")) {
+			udpListenerThread = listenerThread;
+		}
+	}
 
 	/**
 	 * Gets the session ID.
@@ -111,12 +112,13 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 		}
 		return sessionId;
 	}
+
 	/**
-     * Sends a message to the server using the appropriate protocol (TCP or UDP).
-     *
-     * @param message The message to be sent.
-     * @throws IOException If an I/O error occurs during sending.
-     */
+	 * Sends a message to the server using the appropriate protocol (TCP or UDP).
+	 *
+	 * @param message The message to be sent.
+	 * @throws IOException If an I/O error occurs during sending.
+	 */
 	public void sendOutgoingMessage(Message<?> message) throws IOException {
 		System.out.println("Sending message: " + message.getPayload());
 		if (message.isUdp() && udpSocket != null) {
@@ -128,7 +130,6 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
 		}
 	}
-	
 
 	public synchronized void registerIncomingMessage(Message<?> message) {
 		System.out.println("Registering incoming message: " + message.getPayload());
@@ -137,7 +138,6 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 	}
 
 	public synchronized Message<?> nextIncomingMessage() {
-		System.out.println("Checking for incoming messages. Queue size: " + incomingMessages.size());
 		Message<?> nextMessage = this.incomingMessages.poll();  // Use poll() instead of remove(0)
 		if (nextMessage != null) {
 			System.out.println("Returning the next incoming message: " + nextMessage.getPayload());
@@ -148,8 +148,6 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 		}
 	}
 
-	
-	
 	/**
 	 * Adds an observer to the client. The observer will be notified of new messages.
 	 *
@@ -160,10 +158,10 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 	}
 
 	/**
-     * Removes a message observer.
-     *
-     * @param observer The observer to be removed.
-     */
+	 * Removes a message observer.
+	 *
+	 * @param observer The observer to be removed.
+	 */
 	public void removeObserver(MessageObserver observer) {
 		this.observers.remove(observer);
 	}
@@ -207,5 +205,4 @@ import no.ntnu.sigve.sockets.UdpClientSocket;
 			Thread.currentThread().interrupt();
 		}
 	}
-	
 }

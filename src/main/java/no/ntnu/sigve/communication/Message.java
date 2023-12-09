@@ -5,7 +5,7 @@ import java.util.UUID;
 
 /**
  * Represents a message sent between server and client.
- * 
+ *
  * <ul><li>{@link Message#destination Destination} is the client to which the message should be
  * sent.</li>
  * <li>{@link Message#source Source} is the client from which the message was sent. This should be
@@ -17,7 +17,6 @@ public class Message<T extends Serializable> implements Serializable {
 	private UUID source;
 	private UUID destination;
 	private T payload;
-	private UUID sessionId;
 	private boolean isUdp;
 
 	/**
@@ -94,15 +93,21 @@ public class Message<T extends Serializable> implements Serializable {
 	}
 
 
+	/**
+	 * Checks whether this message should be sent over a UDP connection.
+	 *
+	 * @return whether this message should be sent over a UDP connection
+	 */
 	public boolean isUdp() {
 		return isUdp;
 	}
 
+	/**
+	 * Sets whether this message should be sent over a UDP connection.
+	 *
+	 * @param isUdp whether this message should be sent over a UDP connection
+	 */
 	public void setUdp(boolean isUdp) {
 		this.isUdp = isUdp;
 	}
-
-	public UUID getSessionId() {
-        return sessionId;
-    }
 }
