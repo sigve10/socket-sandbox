@@ -1,14 +1,15 @@
 package no.ntnu.sigve.client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.util.UUID;
 import no.ntnu.sigve.communication.Message;
 import no.ntnu.sigve.communication.Protocol;
 import no.ntnu.sigve.communication.ProtocolUser;
-import no.ntnu.sigve.communication.UuidMessage;
+import no.ntnu.sigve.sockets.ClientSocket;
+import no.ntnu.sigve.sockets.ClientSocketFactory;
+import no.ntnu.sigve.sockets.TcpClientSocket;
+import no.ntnu.sigve.sockets.TransportProtocol;
+import no.ntnu.sigve.sockets.UdpClientSocket;
 
 /**
  * A client connection to a server. Capable of continuously reading information from the client and
@@ -21,24 +22,63 @@ public class Client implements ProtocolUser {
 	private static final String NOT_CONNECTED_MESSAGE = "Client is not connected";
 
 	private final String address;
-	private final int port;
+	private final int tcpPort;
+	private final int udpPort;
 	private final Protocol<Client> protocol;
 
-	private ObjectOutputStream output;
-	private Socket socket;
-	private UUID sessionId;
+	private ClientSocket tcpSocket;
+	private ClientSocket udpSocket;
 
 	/**
-	 * Creates a new client connection to a server.
+	 * Creates a new client with a UDP connection.
 	 *
-	 * @param address  the address of the server to connect to
-	 * @param port     the port of the server to connect to
-	 * @param protocol the protocol by which the client will interpret messages.
+	 * @param port the port to connect to
+	 * @param protocol the protocol associated with this client
+	 */
+	public Client(int port, Protocol<Client> protocol) {
+		this.address = "";
+		this.tcpPort = 0;
+		this.udpPort = port;
+		this.protocol = protocol;
+	}
+
+	/**
+	 * Creates a new client with a TCP connection.
+	 *
+	 * @param address the address to connect to
+	 * @param port the port to connect to
+	 * @param protocol the protocol associated with this client
 	 */
 	public Client(String address, int port, Protocol<Client> protocol) {
 		this.address = address;
-		this.port = port;
+		this.tcpPort = port;
+		this.udpPort = 0;
 		this.protocol = protocol;
+	}
+
+	/**
+	 * Creates a new client with both a TCP and a UDP connection.
+	 *
+	 * @param address the address for the TCP connection
+	 * @param tcpPort the port for the TCP connection
+	 * @param udpPort the port for the UDP connection
+	 * @param protocol the protocol to associate with this client
+	 */
+	public Client(String address, int tcpPort, int udpPort, Protocol<Client> protocol) {
+		this.address = address;
+		this.tcpPort = tcpPort;
+		this.udpPort = udpPort;
+		this.protocol = protocol;
+	}
+
+	private ClientSocket createSocket(TransportProtocol type, int port)
+		throws IOException {
+		ClientSocket socket = ClientSocketFactory.createSocket(type, this.address, port);
+
+		socket.connect();
+
+		new ClientListener(this, socket).start();
+		return socket;
 	}
 
 	/**
@@ -47,30 +87,13 @@ public class Client implements ProtocolUser {
 	 * @throws IOException If connecting to the server fails
 	 */
 	public void connect() throws IOException {
-		this.socket = new Socket(address, port);
-
-		ObjectInputStream socketResponseStream =
-				new ObjectInputStream(this.socket.getInputStream());
-		this.output = new ObjectOutputStream(this.socket.getOutputStream());
-
-		UUID uuid = null;
-		try {
-			UuidMessage uuidMessage = (UuidMessage) socketResponseStream.readObject();
-			if (uuidMessage != null) {
-				uuid = uuidMessage.getPayload();
-			}
-		} catch (ClassNotFoundException | ClassCastException e) {
-			//Do nothing
+		if (this.tcpPort != 0) {
+			createSocket(TransportProtocol.TCP, this.tcpPort);
+			this.onClientConnected();
 		}
-		if (uuid != null) {
-			this.sessionId = uuid;
-			System.out.println("Received session ID: " + this.sessionId);
-		} else {
-			throw new IllegalStateException("Session ID was not received properly.");
+		if (this.udpPort != 0) {
+			createSocket(TransportProtocol.UDP, this.udpPort);
 		}
-
-		new ClientListener(this, socketResponseStream).start();
-		onClientConnected();
 	}
 
 	/**
@@ -79,10 +102,10 @@ public class Client implements ProtocolUser {
 	 * @return The session ID
 	 */
 	public UUID getSessionId() {
-		if (socket == null) {
-			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
+		if (tcpSocket != null) {
+			return ((TcpClientSocket) tcpSocket).getSessionId();
 		}
-		return sessionId;
+		return null;
 	}
 
 	/**
@@ -91,14 +114,18 @@ public class Client implements ProtocolUser {
 	 * @param message to send to the server.
 	 */
 	public void sendOutgoingMessage(Message<?> message) {
-		if (socket == null) {
-			throw new IllegalStateException(NOT_CONNECTED_MESSAGE);
-		}
 		try {
-			this.output.writeObject(message);
-		} catch (IOException ioe) {
-			System.err.println("Could not send outgoing message. Here's the stacktrace:");
-			ioe.printStackTrace();
+			if (message.isUdp()) {
+				if (getSessionId() != null) {
+					message.assignSource(getSessionId());
+				}
+
+				this.udpSocket.sendMessage(message);
+			} else {
+				this.tcpSocket.sendMessage(message);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -116,13 +143,13 @@ public class Client implements ProtocolUser {
 	 * session id.
 	 */
 	public void onClientConnected() {
-		this.protocol.onClientConnect(this, this.sessionId);
+		this.protocol.onClientConnect(this, getSessionId());
 	}
 
 	/**
 	 * Notifies the connected protocol that the client has disconnected from the server.
 	 */
 	public void onClientDisconnected() {
-		this.protocol.onClientDisconnect(this, this.sessionId);
+		this.protocol.onClientDisconnect(this, getSessionId());
 	}
 }

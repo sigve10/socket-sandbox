@@ -3,6 +3,7 @@ package no.ntnu.sigve.client;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import no.ntnu.sigve.communication.Message;
+import no.ntnu.sigve.sockets.ClientSocket;
 
 /**
  * A separate thread from a client which is responsible for actively listening for new messages from
@@ -11,17 +12,11 @@ import no.ntnu.sigve.communication.Message;
 public class ClientListener extends Thread {
 
 	Client client;
-	ObjectInputStream messageStream;
+	ClientSocket socket;
 
-	/**
-	 * Creates a new client listener.
-	 *
-	 * @param client the client this listener belongs to
-	 * @param messageStream the socket input stream this listener should listen to
-	 */
-	public ClientListener(Client client, ObjectInputStream messageStream) {
+	public ClientListener(Client client, ClientSocket socket) {
 		this.client = client;
-		this.messageStream = messageStream;
+		this.socket = socket;
 	}
 
 	/**
@@ -32,9 +27,9 @@ public class ClientListener extends Thread {
 	public void run() {
 		try {
 			Message<?> incomingMessage;
-			while ((incomingMessage = (Message<?>) messageStream.readObject()) != null) {
-				handleIncomingMessage(incomingMessage);
-			}
+			do {
+				incomingMessage = socket.receiveMessage();
+			} while (incomingMessage != null);
 		} catch (IOException | ClassNotFoundException e) {
 			handleException(e);
 		} finally {
@@ -64,8 +59,8 @@ public class ClientListener extends Thread {
 
 	private void closeInput() {
 		try {
-			if (this.messageStream != null) {
-				this.messageStream.close();
+			if (this.socket != null) {
+				this.socket.close();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

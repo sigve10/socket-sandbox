@@ -8,20 +8,29 @@ import no.ntnu.sigve.communication.Message;
  */
 public interface ClientSocket {
 	/**
-	 * Connects the socket to a server.
+	 * Sends a message through this socket.
 	 *
-	 * @throws IOException if the connection fails to be established
+	 * @param message the message to semd
 	 */
-	void connect() throws IOException;
+	public void sendMessage(Message<?> message) throws IOException;
 
 	/**
-	 * Attempts to send a message through this socket.
+	 * Waits for a message to be received from this socket.
 	 *
-	 * @param message the message to be sent
-	 * @throws IOException if the message fails to send
+	 * @return the message received from the socket
 	 */
-	void sendMessage(Message<?> message) throws IOException;
-	Message<?> receiveMessage() throws IOException, ClassNotFoundException;
-	boolean isClosed();
-	void close() throws IOException;
+	public Message<?> receiveMessage() throws IOException, ClassNotFoundException;
+
+	/**
+	 * Attempts to close this socket.
+	 */
+	public void close() throws IOException;
+
+	/**
+	 * Attempts to connect the socket to the server.
+	 *
+	 * @throws IOException if connecting to the server fails
+	 */
+	public void connect() throws IOException;
+
 }
