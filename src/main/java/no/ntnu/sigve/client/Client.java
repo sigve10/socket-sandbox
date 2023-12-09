@@ -117,8 +117,6 @@ public class Client implements ProtocolUser {
 	 * @throws IOException if closing the socket or streams fail.
 	 */
 	public void stopSocketCommunication() throws IOException{
-		socketResponseStream.close();
-		output.close();
 		socket.close();
 	}
 
