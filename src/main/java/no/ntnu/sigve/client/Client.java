@@ -24,6 +24,7 @@ public class Client implements ProtocolUser {
 	private final int port;
 	private final Protocol<Client> protocol;
 
+	ObjectInputStream socketResponseStream;
 	private ObjectOutputStream output;
 	private Socket socket;
 	private UUID sessionId;
@@ -49,7 +50,7 @@ public class Client implements ProtocolUser {
 	public void connect() throws IOException {
 		this.socket = new Socket(address, port);
 
-		ObjectInputStream socketResponseStream =
+		socketResponseStream =
 				new ObjectInputStream(this.socket.getInputStream());
 		this.output = new ObjectOutputStream(this.socket.getOutputStream());
 
@@ -109,6 +110,16 @@ public class Client implements ProtocolUser {
 	 */
 	public void registerIncomingMessage(Message<?> message) {
 		this.protocol.receiveMessage(this, message);
+	}
+
+	/**
+	 * Closes input and output streams and closes the socket.
+	 * @throws IOException if closing the socket or streams fail.
+	 */
+	public void stopSocketCommunication() throws IOException{
+		socketResponseStream.close();
+		output.close();
+		socket.close();
 	}
 
 	/**
