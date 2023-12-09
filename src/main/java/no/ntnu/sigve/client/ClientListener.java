@@ -4,11 +4,21 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import no.ntnu.sigve.communication.Message;
 
+/**
+ * A separate thread from a client which is responsible for actively listening for new messages from
+ * the server.
+ */
 public class ClientListener extends Thread {
 
 	Client client;
 	ObjectInputStream messageStream;
 
+	/**
+	 * Creates a new client listener.
+	 *
+	 * @param client the client this listener belongs to
+	 * @param messageStream the socket input stream this listener should listen to
+	 */
 	public ClientListener(Client client, ObjectInputStream messageStream) {
 		this.client = client;
 		this.messageStream = messageStream;
@@ -27,8 +37,9 @@ public class ClientListener extends Thread {
 			}
 		} catch (IOException | ClassNotFoundException e) {
 			handleException(e);
-		}     finally {
+		} finally {
 			closeInput();
+			this.client.onClientDisconnected();
 		}
 	}
 
@@ -48,7 +59,7 @@ public class ClientListener extends Thread {
 	 * @param e The exception to handle.
 	 */
 	private void handleException(Exception e) {
-		System.err.println("Error in ClientListener: " + e.getMessage());
+		e.printStackTrace();
 	}
 
 	private void closeInput() {
@@ -57,7 +68,7 @@ public class ClientListener extends Thread {
 				this.messageStream.close();
 			}
 		} catch (IOException e) {
-			System.err.println("Failed to close input stream: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }
